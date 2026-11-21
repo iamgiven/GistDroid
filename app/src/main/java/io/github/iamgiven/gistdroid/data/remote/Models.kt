@@ -20,10 +20,22 @@ data class Gist(
     @SerialName("updated_at") val updatedAt: String = "",
     val files: Map<String, GistFile> = emptyMap(),
     val owner: GitHubUser? = null,
+    val history: List<GistRevision> = emptyList(),
 ) {
     val title: String
         get() = description?.takeIf { it.isNotBlank() } ?: files.keys.firstOrNull() ?: id
 }
+
+@Serializable
+data class GistRevision(
+    val version: String,
+    @SerialName("committed_at") val committedAt: String = "",
+    @SerialName("change_status") val changeStatus: ChangeStatus = ChangeStatus(),
+    val user: GitHubUser? = null,
+)
+
+@Serializable
+data class ChangeStatus(val total: Int = 0, val additions: Int = 0, val deletions: Int = 0)
 
 @Serializable
 data class GistFile(

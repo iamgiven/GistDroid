@@ -57,6 +57,8 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.iamgiven.gistdroid.EditSource
+import io.github.iamgiven.gistdroid.Revision
 import io.github.iamgiven.gistdroid.ViewerFile
 import io.github.iamgiven.gistdroid.data.applyOrder
 import io.github.iamgiven.gistdroid.data.remote.Gist
@@ -187,7 +189,7 @@ fun GistDetailScreen(
                     title = "Couldn't load gist",
                     message = state.error.orEmpty(),
                 ) { Button(onClick = vm::load) { Text("Retry") } }
-                else -> GistContent(gist, order, localId, onOpenLocal, onReorder = vm::saveOrder, onViewFile = onViewFile)
+                else -> GistContent(gist, order, localId, onOpenLocal, onReorder = vm::saveOrder, onViewFile = onViewFile, editable = isOwner)
             }
         }
     }
@@ -214,6 +216,7 @@ private fun GistContent(
     onOpenLocal: (Long) -> Unit,
     onReorder: (List<String>) -> Unit,
     onViewFile: (ViewerFile) -> Unit,
+    editable: Boolean,
 ) {
     val lazyState = rememberLazyListState()
     val haptics = LocalHapticFeedback.current
@@ -263,7 +266,27 @@ private fun GistContent(
                     content = file.content.orEmpty(),
                     language = file.language,
                     dragging = isDragging,
-                    onFullscreen = { onViewFile(ViewerFile(name, file.content.orEmpty(), file.language)) },
+                    onFullscreen = {
+                        onViewFile(
+                            ViewerFile(
+                                filename = name,
+                                content = file.content.orEmpty(),
+                                language = file.language,
+                                updatedAt = parseIso(gist.updatedAt),
+                                revisions = gist.history.map { r ->
+                                    Revision(
+                                        version = r.version,
+                                        committedAt = parseIso(r.committedAt),
+                                        additions = r.changeStatus.additions,
+                                        deletions = r.changeStatus.deletions,
+                                        user = r.user?.login,
+                                    )
+                                },
+                                revisionsUrl = gist.htmlUrl.takeIf { it.isNotBlank() }?.let { "$it/revisions" },
+                                edit = if (editable) EditSource(isGist = true, id = gist.id) else null,
+                            )
+                        )
+                    },
                     dragHandle = if (names.size > 1) {
                         {
                             DragHandleIcon(

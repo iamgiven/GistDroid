@@ -4,7 +4,15 @@ import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.os.Build
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import android.view.WindowManager
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -96,6 +104,32 @@ data class ConnectState(val verifying: Boolean = false, val error: String? = nul
 
 class SettingsViewModel(private val c: AppContainer) : ViewModel() {
     val login: StateFlow<String?> = c.settings.login.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Decoded avatar; works with a gist-only token since profile pictures are public. */
+    private val _avatar = MutableStateFlow<ImageBitmap?>(null)
+    val avatar: StateFlow<ImageBitmap?> = _avatar.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            c.settings.login.collect { login ->
+                if (login == null) {
+                    _avatar.value = null
+                    return@collect
+                }
+                runCatching {
+                    // Accounts connected before avatars were stored: look the URL up once.
+                    val url = c.settings.avatarUrl.first() ?: c.api.getUser().avatarUrl?.also { c.settings.setAvatarUrl(it) }
+                    if (url != null) {
+                        val sized = url + (if ('?' in url) "&" else "?") + "s=160"
+                        val bytes = c.api.fetchBytes(sized)
+                        _avatar.value = withContext(Dispatchers.Default) {
+                            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+                        }
+                    }
+                }
+            }
+        }
+    }
     val theme: StateFlow<ThemeMode> = c.settings.themeMode.stateIn(viewModelScope, SharingStarted.Eagerly, ThemeMode.SYSTEM)
     val dynamic: StateFlow<Boolean> = c.settings.dynamicColor.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val wrapCode: StateFlow<Boolean> = c.settings.wrapCode.stateIn(viewModelScope, SharingStarted.Eagerly, false)
@@ -114,6 +148,7 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
             try {
                 val user = c.api.verifyToken(token)
                 c.settings.setAccount(token, user.login)
+                c.settings.setAvatarUrl(user.avatarUrl)
                 _connect.value = ConnectState()
                 onSuccess()
             } catch (e: CancellationException) {
@@ -140,6 +175,7 @@ fun SettingsScreen() {
     val dynamic by vm.dynamic.collectAsStateWithLifecycle()
     val wrapCode by vm.wrapCode.collectAsStateWithLifecycle()
     val connect by vm.connect.collectAsStateWithLifecycle()
+    val avatar by vm.avatar.collectAsStateWithLifecycle()
     var confirmSignOut by remember { mutableStateOf(false) }
     if (confirmSignOut) {
         AlertDialog(
@@ -177,7 +213,7 @@ fun SettingsScreen() {
                         ListItem(
                             headlineContent = { Text("@$user", fontWeight = FontWeight.SemiBold) },
                             supportingContent = { Text("Connected to GitHub") },
-                            leadingContent = { Avatar(user) },
+                            leadingContent = { Avatar(user, avatar) },
                             trailingContent = {
                                 TextButton(onClick = { confirmSignOut = true }) {
                                     Icon(Icons.AutoMirrored.Filled.Logout, null, Modifier.size(18.dp))
@@ -284,14 +320,18 @@ fun SettingsScreen() {
 }
 
 @Composable
-private fun Avatar(login: String) {
+private fun Avatar(login: String, image: ImageBitmap?) {
     Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(44.dp)) {
         Box(contentAlignment = Alignment.Center) {
-            Text(
-                login.take(1).uppercase(),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
+            if (image != null) {
+                Image(image, "@$login", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            } else {
+                Text(
+                    login.take(1).uppercase(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
         }
     }
 }

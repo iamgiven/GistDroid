@@ -1,5 +1,6 @@
 package io.github.iamgiven.gistdroid.ui
 
+import android.net.Uri
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.WindowInsets
@@ -48,12 +49,13 @@ private object Routes {
     const val SETTINGS = "settings"
     const val GIST_DETAIL = "gist/{id}"
     const val LOCAL_DETAIL = "snippet/{id}"
-    const val EDITOR = "editor/{target}/{id}"
+    const val EDITOR = "editor/{target}/{id}?file={file}"
     const val VIEWER = "viewer"
 
     fun gist(id: String) = "gist/$id"
     fun snippet(id: Long) = "snippet/$id"
-    fun editor(target: EditorTarget, id: String?) = "editor/${target.name}/${id ?: NEW}"
+    fun editor(target: EditorTarget, id: String?, file: String? = null) =
+        "editor/${target.name}/${id ?: NEW}" + (file?.let { "?file=" + Uri.encode(it) } ?: "")
     const val NEW = "new"
 }
 
@@ -139,11 +141,26 @@ fun GistDroidNavHost() {
                     onViewFile = { container.viewerFile.value = it; nav.navigate(Routes.VIEWER) },
                 )
             }
-            composable(Routes.VIEWER) { CodeViewerScreen(onBack = { nav.popBackStack() }) }
-            composable(Routes.EDITOR) { entry ->
+            composable(Routes.VIEWER) {
+                CodeViewerScreen(
+                    onBack = { nav.popBackStack() },
+                    onEdit = { source, filename ->
+                        // Replace the viewer with the editor, so saving returns to the refreshed detail screen.
+                        nav.popBackStack()
+                        nav.navigate(
+                            Routes.editor(if (source.isGist) EditorTarget.GIST else EditorTarget.LOCAL, source.id, filename)
+                        )
+                    },
+                )
+            }
+            composable(
+                Routes.EDITOR,
+                arguments = listOf(navArgument("file") { type = NavType.StringType; nullable = true; defaultValue = null }),
+            ) { entry ->
                 val target = EditorTarget.valueOf(entry.arguments?.getString("target") ?: EditorTarget.LOCAL.name)
                 val id = entry.arguments?.getString("id")?.takeIf { it != Routes.NEW }
                 EditorScreen(
+                    initialFile = entry.arguments?.getString("file"),
                     target = target,
                     id = id,
                     onClose = { nav.popBackStack() },

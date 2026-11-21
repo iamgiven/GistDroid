@@ -68,6 +68,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.background
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.automirrored.filled.WrapText
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.SolidColor
+import io.github.iamgiven.gistdroid.ui.appContainer
+import io.github.iamgiven.gistdroid.ui.components.CodeEditor
+import io.github.iamgiven.gistdroid.ui.components.previewOf
 import io.github.iamgiven.gistdroid.ui.appViewModel
 import io.github.iamgiven.gistdroid.ui.components.CodeColors
 import io.github.iamgiven.gistdroid.ui.components.DragHandleIcon
@@ -90,6 +100,7 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 fun EditorScreen(
     target: EditorTarget,
     id: String?,
+    initialFile: String? = null,
     onClose: () -> Unit,
     onSaved: (savedId: String, isNew: Boolean) -> Unit,
 ) {
@@ -117,12 +128,20 @@ fun EditorScreen(
         }
     }
 
+    // Opened from the code viewer's Edit button: jump straight to that file once it's loaded.
+    var initialHandled by rememberSaveable { mutableStateOf(initialFile == null) }
+    LaunchedEffect(state.loading, state.files.size) {
+        if (!initialHandled && !state.loading && state.files.isNotEmpty()) {
+            state.files.firstOrNull { it.name == initialFile }?.let { editingKey = it.key }
+            initialHandled = true
+        }
+    }
+
     // Full-screen page for a single file.
     val editing = state.files.firstOrNull { it.key == editingKey }
     if (editing != null) {
         FileEditorPage(
             file = editing,
-            codeColors = codeColors,
             onNameChange = { vm.updateFile(editing.key, name = it) },
             onContentChange = { vm.updateFile(editing.key, content = it) },
             onDelete = if (state.files.size > 1) {
@@ -284,7 +303,7 @@ fun EditorScreen(
     }
 }
 
-/** Compact row for one file in the editor's file list. */
+/** Card for one file in the editor's file list: header with actions, then a short preview. */
 @Composable
 private fun FileRow(
     file: EditableFile,
@@ -295,14 +314,13 @@ private fun FileRow(
     dragHandle: (@Composable () -> Unit)?,
 ) {
     val lines = remember(file.content) { if (file.content.isEmpty()) 0 else file.content.count { it == '\n' } + 1 }
-    val firstLine = remember(file.content, file.name, codeColors) {
-        file.content.lineSequence().firstOrNull { it.isNotBlank() }?.trim()
-            ?.let { SyntaxHighlighter.highlight(it, file.name, codeColors) }
-    }
+    val preview = remember(file.content, file.name, codeColors) { previewOf(file.content, file.name, codeColors) }
     val shape = RoundedCornerShape(24.dp)
     Card(
         onClick = onOpen,
-        modifier = Modifier.fillMaxWidth().shadow(if (dragging) 8.dp else 0.dp, shape),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (dragging) Modifier.shadow(8.dp, shape) else Modifier),
         shape = shape,
         colors = CardDefaults.cardColors(
             containerColor = if (dragging) MaterialTheme.colorScheme.surfaceContainerHigh
@@ -311,11 +329,21 @@ private fun FileRow(
         border = cardBorder(),
     ) {
         Row(
-            Modifier.padding(start = if (dragHandle != null) 4.dp else 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(start = if (dragHandle != null) 4.dp else 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            dragHandle?.invoke()
-            Column(Modifier.weight(1f).padding(end = 4.dp)) {
+            if (dragHandle != null) {
+                dragHandle()
+            } else {
+                Icon(
+                    Icons.Outlined.Description, null,
+                    Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.width(12.dp))
+            }
+            Column(Modifier.weight(1f)) {
                 Text(
                     file.name.ifBlank { "Untitled file" },
                     style = MaterialTheme.typography.titleSmall,
@@ -331,33 +359,38 @@ private fun FileRow(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (firstLine != null) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        firstLine,
-                        style = MonoStyle,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
             }
-            IconButton(onClick = onOpen) { Icon(Icons.Outlined.Edit, "Edit file") }
+            IconButton(onClick = onOpen, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Outlined.Edit, "Edit file", Modifier.size(20.dp))
+            }
             if (onDelete != null) {
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Outlined.Delete, "Remove file", tint = MaterialTheme.colorScheme.error)
+                IconButton(onClick = onDelete, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.Outlined.Delete, "Remove file", Modifier.size(20.dp), tint = MaterialTheme.colorScheme.error)
                 }
             }
+        }
+        if (preview != null) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+            Text(
+                preview,
+                style = MonoStyle,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+            )
         }
     }
 }
 
-/** Full-screen page that edits a single file's name and content. */
+/** Full-screen page that edits one file, styled like the full-screen code viewer. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FileEditorPage(
     file: EditableFile,
-    codeColors: CodeColors,
     onNameChange: (String) -> Unit,
     onContentChange: (String) -> Unit,
     onDelete: (() -> Unit)?,
@@ -365,61 +398,81 @@ private fun FileEditorPage(
 ) {
     BackHandler(onBack = onDone)
     var confirmDelete by remember { mutableStateOf(false) }
+    val wrapDefault by appContainer().settings.wrapCode.collectAsStateWithLifecycle(initialValue = false)
+    var wrapOverride by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    val wrap = wrapOverride ?: wrapDefault
+    val nameFocus = remember { FocusRequester() }
+    val lines = remember(file.content) { file.content.count { it == '\n' } + 1 }
+    LaunchedEffect(Unit) { if (file.name.isBlank() && file.content.isBlank()) nameFocus.requestFocus() }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(file.name.ifBlank { "New file" }, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Column {
+                        BasicTextField(
+                            value = file.name,
+                            onValueChange = onNameChange,
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Uri),
+                            modifier = Modifier.fillMaxWidth().focusRequester(nameFocus),
+                            decorationBox = { inner ->
+                                Box {
+                                    if (file.name.isEmpty()) {
+                                        Text(
+                                            "File name (e.g. main.kt)",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                        )
+                                    }
+                                    inner()
+                                }
+                            },
+                        )
+                        Text(
+                            listOfNotNull(languageFromName(file.name), "$lines ${if (lines == 1) "line" else "lines"}")
+                                .joinToString(" · "),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                 },
                 actions = {
+                    IconButton(onClick = { wrapOverride = !wrap }, modifier = Modifier.size(40.dp)) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.WrapText,
+                            if (wrap) "Disable word wrap" else "Enable word wrap",
+                            tint = if (wrap) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     if (onDelete != null) {
-                        IconButton(onClick = { confirmDelete = true }) {
+                        IconButton(onClick = { confirmDelete = true }, modifier = Modifier.size(40.dp)) {
                             Icon(Icons.Outlined.Delete, "Remove file", tint = MaterialTheme.colorScheme.error)
                         }
                     }
-                    TextButton(onClick = onDone, modifier = Modifier.padding(end = 4.dp)) { Text("Done") }
+                    IconButton(onClick = onDone) { Icon(Icons.Default.Check, "Done") }
                 },
             )
         },
     ) { padding ->
-        Column(
+        Box(
             Modifier
                 .padding(padding)
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
                 .imePadding()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
-            OutlinedTextField(
-                value = file.name,
-                onValueChange = onNameChange,
-                label = { Text("File name") },
-                placeholder = { Text("e.g. main.kt") },
-                leadingIcon = { Icon(Icons.Outlined.Description, null) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Uri),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-            )
-            Spacer(Modifier.height(12.dp))
-            val transformation = remember(file.name, codeColors) { HighlightTransformation(file.name, codeColors) }
-            OutlinedTextField(
+            CodeEditor(
                 value = file.content,
                 onValueChange = onContentChange,
-                placeholder = { Text("Write or paste code here…", style = MonoStyle) },
-                textStyle = MonoStyle,
-                visualTransformation = transformation,
-                keyboardOptions = KeyboardOptions(
-                    autoCorrectEnabled = false,
-                    capitalization = KeyboardCapitalization.None,
-                    keyboardType = KeyboardType.Ascii,
-                ),
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                shape = RoundedCornerShape(16.dp),
+                filename = file.name,
+                wrap = wrap,
             )
-            Spacer(Modifier.height(8.dp))
         }
     }
 

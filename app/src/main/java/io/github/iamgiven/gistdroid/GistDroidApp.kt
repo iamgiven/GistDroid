@@ -33,7 +33,23 @@ class GistDroidApp : Application() {
 data class SharedText(val subject: String?, val text: String)
 
 /** File opened in the full-screen code viewer. */
-data class ViewerFile(val filename: String, val content: String, val language: String?)
+data class ViewerFile(
+    val filename: String,
+    val content: String,
+    val language: String?,
+    /** Last modification time (millis), if known. */
+    val updatedAt: Long? = null,
+    /** Gist revisions, newest first (empty for local snippets). */
+    val revisions: List<Revision> = emptyList(),
+    /** Link to the gist's revisions page on GitHub. */
+    val revisionsUrl: String? = null,
+    /** Where the "Edit" button leads; null when the file isn't editable. */
+    val edit: EditSource? = null,
+)
+
+data class Revision(val version: String, val committedAt: Long, val additions: Int, val deletions: Int, val user: String?)
+
+data class EditSource(val isGist: Boolean, val id: String)
 
 class AppContainer(context: Context) {
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

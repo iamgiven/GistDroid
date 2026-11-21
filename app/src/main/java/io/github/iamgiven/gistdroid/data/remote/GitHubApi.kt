@@ -140,6 +140,15 @@ class GitHubApi(private val tokenProvider: suspend () -> String?) {
         return result.body
     }
 
+    /** Downloads a small public image (e.g. an avatar). */
+    suspend fun fetchBytes(url: String): ByteArray = withContext(Dispatchers.IO) {
+        val request = Request.Builder().url(url).header("User-Agent", "GistDroid").build()
+        client.newCall(request).execute().use { r ->
+            if (!r.isSuccessful) throw ApiException(r.code, null)
+            r.body?.bytes() ?: ByteArray(0)
+        }
+    }
+
     suspend fun deleteGist(id: String) {
         execute("DELETE", "$BASE/gists/$id").ensureOk()
     }

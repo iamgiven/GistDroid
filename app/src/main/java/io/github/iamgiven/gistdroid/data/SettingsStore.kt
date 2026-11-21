@@ -23,6 +23,7 @@ class SettingsStore(private val context: Context) {
     /** Token encrypted with [TokenCipher] (Android Keystore). */
     private val tokenKey = stringPreferencesKey("token_enc")
     private val loginKey = stringPreferencesKey("login")
+    private val avatarKey = stringPreferencesKey("avatar_url")
     private val themeKey = stringPreferencesKey("theme")
     private val dynamicKey = booleanPreferencesKey("dynamic_color")
     private val wrapKey = booleanPreferencesKey("wrap_code")
@@ -44,6 +45,14 @@ class SettingsStore(private val context: Context) {
         .map { prefs -> if (prefs[tokenKey] != null) prefs[loginKey] else null }
         .distinctUntilChanged()
 
+    val avatarUrl: Flow<String?> = context.dataStore.data
+        .map { prefs -> if (prefs[tokenKey] != null) prefs[avatarKey] else null }
+        .distinctUntilChanged()
+
+    suspend fun setAvatarUrl(url: String?) {
+        context.dataStore.edit { if (url == null) it.remove(avatarKey) else it[avatarKey] = url }
+    }
+
     val themeMode: Flow<ThemeMode> = context.dataStore.data.map { prefs ->
         prefs[themeKey]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM
     }.distinctUntilChanged()
@@ -64,6 +73,7 @@ class SettingsStore(private val context: Context) {
             it.remove(tokenKey)
             it.remove(legacyTokenKey)
             it.remove(loginKey)
+            it.remove(avatarKey)
         }
         decrypted = null
         withContext(Dispatchers.Default) { TokenCipher.deleteKey() }

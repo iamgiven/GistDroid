@@ -72,6 +72,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.iamgiven.gistdroid.EditSource
 import io.github.iamgiven.gistdroid.ViewerFile
 import io.github.iamgiven.gistdroid.ui.appViewModel
 import io.github.iamgiven.gistdroid.ui.components.FileCard
@@ -172,8 +173,7 @@ fun LocalDetailScreen(
                 DetailHeaderCard(
                     badges = listOf(
                         if (gistId != null) "On Gist" tone BadgeTone.BLUE else "Local only" tone BadgeTone.NEUTRAL,
-                        visibilityBadge(s.isPublic),
-                    ),
+                    ) + listOfNotNull(if (gistId != null) visibilityBadge(s.isPublic) else null),
                     description = s.description,
                     meta = {
                         MetaChip(Icons.Outlined.Description, fileCount(s.files.size))
@@ -209,7 +209,17 @@ fun LocalDetailScreen(
                         content = file.content,
                         language = null,
                         dragging = isDragging,
-                        onFullscreen = { onViewFile(ViewerFile(file.name, file.content, null)) },
+                        onFullscreen = {
+                            onViewFile(
+                                ViewerFile(
+                                    filename = file.name,
+                                    content = file.content,
+                                    language = null,
+                                    updatedAt = s.updatedAt,
+                                    edit = EditSource(isGist = false, id = id.toString()),
+                                )
+                            )
+                        },
                         dragHandle = if (files.size > 1) {
                             {
                                 DragHandleIcon(

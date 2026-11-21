@@ -1,6 +1,8 @@
 package io.github.iamgiven.gistdroid.ui.components
 
 import android.content.Context
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.animation.Crossfade
@@ -128,8 +130,8 @@ class HighlightTransformation(
 }
 
 /** Files longer than this start truncated, with a "Show all" button. */
-private const val PREVIEW_LINES = 20
-private const val TRUNCATE_THRESHOLD = 30
+private const val PREVIEW_LINES = 10
+private const val TRUNCATE_THRESHOLD = 12
 
 /**
  * Read-only code view with GitHub-style highlighting and line numbers.
@@ -240,7 +242,6 @@ fun FileCard(
     var collapsed by rememberSaveable(filename) { mutableStateOf(false) }
     val lineCount = remember(content) { content.count { it == '\n' } + 1 }
     val long = lineCount > TRUNCATE_THRESHOLD
-    var showAll by rememberSaveable(filename) { mutableStateOf(false) }
     val chevronRotation = if (collapsed) -90f else 0f
 
     val elevation by animateDpAsState(if (dragging) 8.dp else 0.dp, label = "dragElevation")
@@ -286,7 +287,7 @@ fun FileCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            IconButton(onClick = { wrapOverride = !wrap }) {
+            IconButton(onClick = { wrapOverride = !wrap }, modifier = Modifier.size(38.dp)) {
                 Icon(
                     Icons.AutoMirrored.Filled.WrapText,
                     if (wrap) "Disable word wrap" else "Enable word wrap",
@@ -294,14 +295,17 @@ fun FileCard(
                     tint = if (wrap) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            IconButton(onClick = {
-                clipboard.setText(AnnotatedString(content))
-                context.toast("$filename copied")
-            }) {
+            IconButton(
+                onClick = {
+                    clipboard.setText(AnnotatedString(content))
+                    context.toast("$filename copied")
+                },
+                modifier = Modifier.size(38.dp),
+            ) {
                 Icon(Icons.Default.ContentCopy, "Copy", Modifier.size(20.dp))
             }
             if (onFullscreen != null) {
-                IconButton(onClick = onFullscreen) {
+                IconButton(onClick = onFullscreen, modifier = Modifier.size(38.dp)) {
                     Icon(Icons.Default.Fullscreen, "Full screen", Modifier.size(22.dp))
                 }
             }
@@ -309,27 +313,47 @@ fun FileCard(
         if (!collapsed) {
             Column {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
-                CodeView(
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerLow),
-                    code = content,
-                    filename = filename,
-                    wrap = wrap,
-                    maxLines = if (long && !showAll) PREVIEW_LINES else null,
-                )
+                val codeBg = MaterialTheme.colorScheme.surfaceContainerLow
+                Box {
+                    CodeView(
+                        modifier = Modifier.background(codeBg),
+                        code = content,
+                        filename = filename,
+                        wrap = wrap,
+                        maxLines = if (long) PREVIEW_LINES else null,
+                    )
+                    if (long) {
+                        // Fade out the last lines to show the code continues.
+                        Box(
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .background(Brush.verticalGradient(listOf(codeBg.copy(alpha = 0f), codeBg)))
+                        )
+                    }
+                }
                 if (long) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
-                    TextButton(
-                        onClick = { showAll = !showAll },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+                    // "… N more lines" marker; opens the full-screen view when available.
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(codeBg)
+                            .then(if (onFullscreen != null) Modifier.clickable(onClick = onFullscreen) else Modifier)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
-                            if (showAll) Icons.Default.UnfoldLess else Icons.Default.UnfoldMore,
-                            null,
-                            Modifier.size(18.dp),
+                            Icons.Default.MoreHoriz, null,
+                            Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(Modifier.width(6.dp))
-                        Text(if (showAll) "Show less" else "Show all $lineCount lines")
+                        Text(
+                            "${lineCount - PREVIEW_LINES} more lines",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
