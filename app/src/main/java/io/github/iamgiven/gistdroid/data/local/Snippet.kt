@@ -11,6 +11,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -32,16 +33,16 @@ data class Snippet(
         get() = description.takeIf { it.isNotBlank() } ?: files.firstOrNull()?.name ?: "Tanpa judul"
 }
 
-class Converters {
-    private val serializer = ListSerializer(SnippetFile.serializer())
-    private val json = Json { ignoreUnknownKeys = true }
+private val filesJson: Json = Json { ignoreUnknownKeys = true }
+private val filesSerializer: KSerializer<List<SnippetFile>> = ListSerializer(SnippetFile.serializer())
 
+class Converters {
     @TypeConverter
-    fun filesToString(files: List<SnippetFile>): String = json.encodeToString(serializer, files)
+    fun filesToString(files: List<SnippetFile>): String = filesJson.encodeToString(filesSerializer, files)
 
     @TypeConverter
     fun stringToFiles(value: String): List<SnippetFile> =
-        runCatching { json.decodeFromString(serializer, value) }.getOrDefault(emptyList())
+        runCatching { filesJson.decodeFromString(filesSerializer, value) }.getOrDefault(emptyList())
 }
 
 @Dao
