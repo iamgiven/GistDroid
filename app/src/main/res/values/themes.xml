@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="window_bg">#F4FBFB</color>
-    <color name="icon_bg">#00696E</color>
+    <color name="icon_bg">#13141A</color>
     <style name="Theme.GistDroid" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/window_bg</item>
         <item name="android:statusBarColor">@android:color/transparent</item>

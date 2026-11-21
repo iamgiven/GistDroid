@@ -43,9 +43,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.iamgiven.gistdroid.data.local.Snippet
 import io.github.iamgiven.gistdroid.ui.appViewModel
 import io.github.iamgiven.gistdroid.ui.components.EmptyState
+import io.github.iamgiven.gistdroid.ui.components.ListHeader
 import io.github.iamgiven.gistdroid.ui.components.MetaChip
 import io.github.iamgiven.gistdroid.ui.components.MonoStyle
 import io.github.iamgiven.gistdroid.ui.components.SearchField
+import io.github.iamgiven.gistdroid.ui.components.SyntaxHighlighter
+import io.github.iamgiven.gistdroid.ui.components.rememberCodeColors
+import androidx.compose.runtime.remember
 import io.github.iamgiven.gistdroid.ui.components.relativeTime
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,16 +58,13 @@ fun LocalListScreen(onOpen: (Long) -> Unit, onCreate: () -> Unit) {
     val vm = appViewModel { LocalListViewModel(it) }
     val snippets by vm.snippets.collectAsStateWithLifecycle()
     val query by vm.query.collectAsStateWithLifecycle()
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val listState = rememberLazyListState()
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { Text("Local Snippets", fontWeight = FontWeight.SemiBold) },
-                scrollBehavior = scrollBehavior,
-            )
+            ListHeader("Local Snippets", elevated = listState.canScrollBackward) {
+                SearchField(query, { vm.query.value = it }, "Search snippets…")
+            }
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
@@ -75,10 +76,6 @@ fun LocalListScreen(onOpen: (Long) -> Unit, onCreate: () -> Unit) {
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
-            SearchField(
-                query, { vm.query.value = it }, "Search title, file name, or content…",
-                Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
-            )
             val list = snippets
             when {
                 list == null -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
@@ -94,7 +91,7 @@ fun LocalListScreen(onOpen: (Long) -> Unit, onCreate: () -> Unit) {
                 )
                 else -> LazyColumn(
                     state = listState,
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
@@ -117,8 +114,13 @@ private fun SnippetItem(snippet: Snippet, onClick: () -> Unit, modifier: Modifie
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            val preview = snippet.files.firstOrNull()?.content?.trim()?.lineSequence()?.take(3)?.joinToString("\n")
-            if (!preview.isNullOrBlank()) {
+            val first = snippet.files.firstOrNull()
+            val colors = rememberCodeColors()
+            val preview = remember(first, colors) {
+                val text = first?.content?.trim()?.lineSequence()?.take(3)?.joinToString("\n")
+                if (text.isNullOrBlank()) null else SyntaxHighlighter.highlight(text, first!!.name, colors)
+            }
+            if (preview != null) {
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainerHighest,
                     shape = RoundedCornerShape(12.dp),

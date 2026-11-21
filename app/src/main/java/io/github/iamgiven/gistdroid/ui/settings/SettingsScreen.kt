@@ -92,6 +92,7 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
     val login: StateFlow<String?> = c.settings.login.stateIn(viewModelScope, SharingStarted.Eagerly, null)
     val theme: StateFlow<ThemeMode> = c.settings.themeMode.stateIn(viewModelScope, SharingStarted.Eagerly, ThemeMode.SYSTEM)
     val dynamic: StateFlow<Boolean> = c.settings.dynamicColor.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    val wrapCode: StateFlow<Boolean> = c.settings.wrapCode.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _connect = MutableStateFlow(ConnectState())
     val connect: StateFlow<ConnectState> = _connect.asStateFlow()
@@ -120,6 +121,7 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
     fun logout() = viewModelScope.launch { c.settings.clearAccount() }
     fun setTheme(mode: ThemeMode) = viewModelScope.launch { c.settings.setThemeMode(mode) }
     fun setDynamic(enabled: Boolean) = viewModelScope.launch { c.settings.setDynamicColor(enabled) }
+    fun setWrapCode(enabled: Boolean) = viewModelScope.launch { c.settings.setWrapCode(enabled) }
     fun clearError() = _connect.update { it.copy(error = null) }
 }
 
@@ -130,6 +132,7 @@ fun SettingsScreen() {
     val login by vm.login.collectAsStateWithLifecycle()
     val theme by vm.theme.collectAsStateWithLifecycle()
     val dynamic by vm.dynamic.collectAsStateWithLifecycle()
+    val wrapCode by vm.wrapCode.collectAsStateWithLifecycle()
     val connect by vm.connect.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
@@ -205,6 +208,17 @@ fun SettingsScreen() {
                                 }
                                 Switch(checked = dynamic, onCheckedChange = { vm.setDynamic(it) })
                             }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Wrap long lines", style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    "Default word wrap for code (can be toggled per file)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(checked = wrapCode, onCheckedChange = { vm.setWrapCode(it) })
                         }
                     }
                 }

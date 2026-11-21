@@ -25,6 +25,7 @@ class SettingsStore(private val context: Context) {
     private val loginKey = stringPreferencesKey("login")
     private val themeKey = stringPreferencesKey("theme")
     private val dynamicKey = booleanPreferencesKey("dynamic_color")
+    private val wrapKey = booleanPreferencesKey("wrap_code")
 
     @Volatile
     private var decrypted: Pair<String, String?>? = null
@@ -81,6 +82,12 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { it[themeKey] = mode.name }
+    }
+
+    val wrapCode: Flow<Boolean> = context.dataStore.data.map { it[wrapKey] ?: false }.distinctUntilChanged()
+
+    suspend fun setWrapCode(enabled: Boolean) {
+        context.dataStore.edit { it[wrapKey] = enabled }
     }
 
     suspend fun setDynamicColor(enabled: Boolean) {

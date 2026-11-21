@@ -53,6 +53,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.iamgiven.gistdroid.data.remote.Gist
 import io.github.iamgiven.gistdroid.ui.appViewModel
 import io.github.iamgiven.gistdroid.ui.components.EmptyState
+import io.github.iamgiven.gistdroid.ui.components.ListHeader
 import io.github.iamgiven.gistdroid.ui.components.MetaChip
 import io.github.iamgiven.gistdroid.ui.components.SearchField
 import io.github.iamgiven.gistdroid.ui.components.parseIso
@@ -68,7 +69,6 @@ fun GistListScreen(
     val vm = appViewModel { GistListViewModel(it) }
     val state by vm.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val listState = rememberLazyListState()
 
     LaunchedEffect(state.error, state.gists.isEmpty()) {
@@ -80,12 +80,16 @@ fun GistListScreen(
     }
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { Text("Gist", fontWeight = FontWeight.SemiBold) },
-                scrollBehavior = scrollBehavior,
-            )
+            ListHeader("Gists", elevated = state.loggedIn == true && listState.canScrollBackward) {
+                if (state.loggedIn == true) {
+                    SearchField(state.query, vm::setQuery, "Search gists…")
+                    Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterOption("My gists", state.filter == GistFilter.MINE) { vm.setFilter(GistFilter.MINE) }
+                        FilterOption("Starred", state.filter == GistFilter.STARRED) { vm.setFilter(GistFilter.STARRED) }
+                    }
+                }
+            }
         },
         floatingActionButton = {
             if (state.loggedIn == true) {
@@ -110,13 +114,6 @@ fun GistListScreen(
                     Button(onClick = onGoToSettings) { Text("Connect account") }
                 }
                 true -> {
-                    Column(Modifier.padding(horizontal = 16.dp)) {
-                        SearchField(state.query, vm::setQuery, "Search gists…")
-                        Row(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FilterOption("Mine", state.filter == GistFilter.MINE) { vm.setFilter(GistFilter.MINE) }
-                            FilterOption("Starred", state.filter == GistFilter.STARRED) { vm.setFilter(GistFilter.STARRED) }
-                        }
-                    }
                     PullToRefreshBox(
                         isRefreshing = state.refreshing,
                         onRefresh = vm::refresh,
@@ -141,7 +138,7 @@ fun GistListScreen(
                             )
                             else -> LazyColumn(
                                 state = listState,
-                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp),
+                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
                                 verticalArrangement = Arrangement.spacedBy(10.dp),
                                 modifier = Modifier.fillMaxSize(),
                             ) {
