@@ -3,6 +3,7 @@ package io.github.iamgiven.gistdroid.ui.gists
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.iamgiven.gistdroid.AppContainer
+import io.github.iamgiven.gistdroid.data.applyOrder
 import io.github.iamgiven.gistdroid.data.local.Snippet
 import io.github.iamgiven.gistdroid.data.local.SnippetFile
 import io.github.iamgiven.gistdroid.data.remote.Gist
@@ -39,9 +40,35 @@ data class GistListState(
         }
 }
 
+data class FilePreview(val filename: String, val content: String)
+
 class GistListViewModel(private val c: AppContainer) : ViewModel() {
     private val _state = MutableStateFlow(GistListState())
     val state: StateFlow<GistListState> = _state.asStateFlow()
+
+    val orders: StateFlow<Map<String, List<String>>> =
+        c.fileOrder.orders.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    /** Card previews keyed by "id@updatedAt"; a null value means the preview is unavailable. */
+    private val _previews = MutableStateFlow<Map<String, FilePreview?>>(emptyMap())
+    val previews: StateFlow<Map<String, FilePreview?>> = _previews.asStateFlow()
+    private val previewsInFlight = HashSet<String>()
+
+    fun previewKey(gist: Gist) = "${gist.id}@${gist.updatedAt}"
+
+    fun loadPreview(gist: Gist) {
+        val key = previewKey(gist)
+        if (key in _previews.value || !previewsInFlight.add(key)) return
+        viewModelScope.launch {
+            val name = applyOrder(gist.files.keys, orders.value[gist.id]).firstOrNull()
+            val url = name?.let { gist.files[it]?.rawUrl }
+            val preview = if (name != null && url != null) {
+                runCatching { FilePreview(name, c.api.fetchPreview(url)) }.getOrNull()
+            } else null
+            previewsInFlight.remove(key)
+            _previews.update { it + (key to preview) }
+        }
+    }
     private var page = 1
     private var job: Job? = null
 
@@ -127,6 +154,14 @@ class GistDetailViewModel(private val c: AppContainer, private val id: String) :
     val localId: StateFlow<Long?> = c.snippetDao.observeIdByGistId(id)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    /** Custom file order saved on this device (GitHub always sorts by name). */
+    val order: StateFlow<List<String>?> = c.fileOrder.order(id)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    fun saveOrder(names: List<String>) {
+        viewModelScope.launch { c.fileOrder.set(id, names) }
+    }
+
     init {
         load()
         viewModelScope.launch { c.gistChanges.drop(1).collect { if (!_state.value.deleted) load() } }
@@ -155,6 +190,7 @@ class GistDetailViewModel(private val c: AppContainer, private val id: String) :
 
     fun delete() = runBusy {
         c.api.deleteGist(id)
+        c.fileOrder.remove(id)
         _state.update { it.copy(deleted = true) }
         c.notifyGistChanged()
     }
@@ -167,7 +203,9 @@ class GistDetailViewModel(private val c: AppContainer, private val id: String) :
             Snippet(
                 id = existing?.id ?: 0,
                 description = gist.description.orEmpty(),
-                files = gist.files.map { (name, f) -> SnippetFile(name, f.content.orEmpty()) },
+                files = applyOrder(gist.files.keys, order.value).map { name ->
+                    SnippetFile(name, gist.files[name]?.content.orEmpty())
+                },
                 isPublic = gist.public,
                 gistId = gist.id,
                 createdAt = existing?.createdAt ?: now,

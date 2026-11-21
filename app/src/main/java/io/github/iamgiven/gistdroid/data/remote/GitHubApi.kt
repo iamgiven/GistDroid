@@ -37,6 +37,7 @@ class GitHubApi(private val tokenProvider: suspend () -> String?) {
         body: String? = null,
         token: String? = null,
         requireAuth: Boolean = true,
+        range: String? = null,
     ): Result = withContext(Dispatchers.IO) {
         // The token is only ever sent to the GitHub API host over HTTPS, never to other hosts
         // (e.g. raw file URLs). OkHttp also drops the Authorization header on cross-host redirects.
@@ -54,6 +55,7 @@ class GitHubApi(private val tokenProvider: suspend () -> String?) {
             .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
             .header("User-Agent", "GistDroid")
+            .apply { if (range != null) header("Range", range) }
             .apply { if (authToken != null) header("Authorization", "Bearer $authToken") }
             .build()
         client.newCall(request).execute().use { response ->
@@ -129,6 +131,13 @@ class GitHubApi(private val tokenProvider: suspend () -> String?) {
             execute("PATCH", "$BASE/gists/$id", json.encodeToString(UpdateGistRequest.serializer(), body))
                 .ensureOk().body
         )
+    }
+
+    /** First ~2KB of a raw gist file, for card previews (raw host, no token, no API rate limit). */
+    suspend fun fetchPreview(rawUrl: String): String {
+        val result = execute("GET", rawUrl, requireAuth = false, range = "bytes=0-2047")
+        if (result.code != 200 && result.code != 206) throw ApiException(result.code, null)
+        return result.body
     }
 
     suspend fun deleteGist(id: String) {

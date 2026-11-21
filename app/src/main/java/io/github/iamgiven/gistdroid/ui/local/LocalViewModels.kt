@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.iamgiven.gistdroid.AppContainer
 import io.github.iamgiven.gistdroid.data.local.Snippet
+import io.github.iamgiven.gistdroid.data.local.SnippetFile
 import io.github.iamgiven.gistdroid.data.remote.ApiException
 import io.github.iamgiven.gistdroid.data.remote.friendlyMessage
 import kotlinx.coroutines.CancellationException
@@ -72,6 +73,7 @@ class LocalDetailViewModel(private val c: AppContainer, private val id: Long) : 
                     c.api.createGist(s.description, s.isPublic, files)
                 }
                 c.snippetDao.upsert(s.copy(gistId = gist.id))
+                c.fileOrder.set(gist.id, s.files.map { it.name })
                 c.notifyGistChanged()
                 _state.update {
                     it.copy(message = if (existingId == gist.id) "Gist updated" else "Uploaded to Gist")
@@ -83,6 +85,15 @@ class LocalDetailViewModel(private val c: AppContainer, private val id: Long) : 
             } finally {
                 _state.update { it.copy(busy = false) }
             }
+        }
+    }
+
+    /** Saves a new file order (also used for the linked gist on this device). */
+    fun reorder(files: List<SnippetFile>) {
+        viewModelScope.launch {
+            val s = c.snippetDao.get(id) ?: return@launch
+            c.snippetDao.upsert(s.copy(files = files))
+            s.gistId?.let { gistId -> c.fileOrder.set(gistId, files.map { it.name }) }
         }
     }
 

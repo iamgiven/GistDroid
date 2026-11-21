@@ -54,6 +54,11 @@ import io.github.iamgiven.gistdroid.data.remote.Gist
 import io.github.iamgiven.gistdroid.ui.appViewModel
 import io.github.iamgiven.gistdroid.ui.components.EmptyState
 import io.github.iamgiven.gistdroid.ui.components.ListHeader
+import io.github.iamgiven.gistdroid.ui.components.SnippetCard
+import io.github.iamgiven.gistdroid.ui.components.fileCount
+import io.github.iamgiven.gistdroid.ui.components.previewOf
+import io.github.iamgiven.gistdroid.ui.components.rememberCodeColors
+import androidx.compose.material.icons.outlined.Person
 import io.github.iamgiven.gistdroid.ui.components.MetaChip
 import io.github.iamgiven.gistdroid.ui.components.SearchField
 import io.github.iamgiven.gistdroid.ui.components.parseIso
@@ -68,6 +73,7 @@ fun GistListScreen(
 ) {
     val vm = appViewModel { GistListViewModel(it) }
     val state by vm.state.collectAsStateWithLifecycle()
+    val previews by vm.previews.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
 
@@ -81,7 +87,7 @@ fun GistListScreen(
 
     Scaffold(
         topBar = {
-            ListHeader("Gists", elevated = state.loggedIn == true && listState.canScrollBackward) {
+            ListHeader("Gists") {
                 if (state.loggedIn == true) {
                     SearchField(state.query, vm::setQuery, "Search gists…")
                     Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -143,8 +149,12 @@ fun GistListScreen(
                                 modifier = Modifier.fillMaxSize(),
                             ) {
                                 items(items, key = { it.id }) { gist ->
+                                    val key = vm.previewKey(gist)
+                                    LaunchedEffect(key) { vm.loadPreview(gist) }
                                     GistItem(
                                         gist,
+                                        preview = previews[key],
+                                        loadingPreview = key !in previews,
                                         showOwner = state.filter == GistFilter.STARRED,
                                         onClick = { onOpen(gist.id) },
                                         modifier = Modifier.animateItem(),
@@ -180,38 +190,30 @@ private fun FilterOption(label: String, selected: Boolean, onClick: () -> Unit) 
 }
 
 @Composable
-private fun GistItem(gist: Gist, showOwner: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    ElevatedCard(onClick = onClick, modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                gist.title,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                gist.files.keys.joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                MetaChip(
-                    if (gist.public) Icons.Outlined.Public else Icons.Outlined.Lock,
-                    if (gist.public) "Public" else "Secret",
-                )
-                MetaChip(Icons.Outlined.Description, "${gist.files.size} file")
-                MetaChip(Icons.Outlined.Schedule, relativeTime(parseIso(gist.updatedAt)))
-            }
-            val owner = gist.owner?.login
-            if (showOwner && owner != null) {
-                Text(
-                    "@$owner",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+private fun GistItem(
+    gist: Gist,
+    preview: FilePreview?,
+    loadingPreview: Boolean,
+    showOwner: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = rememberCodeColors()
+    val highlighted = remember(preview, colors) { preview?.let { previewOf(it.content, it.filename, colors) } }
+    val owner = gist.owner?.login
+    SnippetCard(
+        title = gist.title,
+        preview = highlighted,
+        previewPlaceholder = loadingPreview,
+        onClick = onClick,
+        modifier = modifier,
+    ) {
+        MetaChip(
+            if (gist.public) Icons.Outlined.Public else Icons.Outlined.Lock,
+            if (gist.public) "Public" else "Secret",
+        )
+        MetaChip(Icons.Outlined.Description, fileCount(gist.files.size))
+        if (showOwner && owner != null) MetaChip(Icons.Outlined.Person, owner)
+        else MetaChip(Icons.Outlined.Schedule, relativeTime(parseIso(gist.updatedAt)))
     }
 }

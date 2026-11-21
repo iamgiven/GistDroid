@@ -58,6 +58,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import io.github.iamgiven.gistdroid.ui.components.DragHandleIcon
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import io.github.iamgiven.gistdroid.ui.appViewModel
 import io.github.iamgiven.gistdroid.ui.components.EmptyState
 import io.github.iamgiven.gistdroid.ui.components.HighlightTransformation
@@ -77,6 +86,14 @@ fun EditorScreen(
     val snackbar = remember { SnackbarHostState() }
     var confirmDiscard by rememberSaveable { mutableStateOf(false) }
     val codeColors = rememberCodeColors()
+    val lazyState = rememberLazyListState()
+    val haptics = LocalHapticFeedback.current
+    val reorderState = rememberReorderableLazyListState(lazyState) { from, to ->
+        val f = from.key as? Long ?: return@rememberReorderableLazyListState
+        val t = to.key as? Long ?: return@rememberReorderableLazyListState
+        vm.moveFile(f, t)
+        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    }
 
     val requestClose: () -> Unit = {
         if (vm.isDirty()) {
@@ -134,6 +151,7 @@ fun EditorScreen(
                     message = state.error.orEmpty(),
                 ) { Button(onClick = onClose) { Text("Back") } }
                 else -> LazyColumn(
+                    state = lazyState,
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize().imePadding(),
@@ -173,9 +191,29 @@ fun EditorScreen(
                         }
                     }
                     items(state.files, key = { it.key }) { file ->
-                        OutlinedCard(shape = RoundedCornerShape(16.dp), modifier = Modifier.animateItem()) {
+                      ReorderableItem(reorderState, key = file.key) { isDragging ->
+                        val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp, label = "drag")
+                        OutlinedCard(
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.shadow(elevation, RoundedCornerShape(16.dp)),
+                            colors = CardDefaults.outlinedCardColors(
+                                containerColor = if (isDragging) MaterialTheme.colorScheme.surfaceContainerHigh
+                                else MaterialTheme.colorScheme.surface,
+                            ),
+                        ) {
                             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (state.files.size > 1) {
+                                        DragHandleIcon(
+                                            Modifier
+                                                .padding(end = 4.dp)
+                                                .draggableHandle(
+                                                    onDragStarted = {
+                                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    },
+                                                )
+                                        )
+                                    }
                                     OutlinedTextField(
                                         value = file.name,
                                         onValueChange = { vm.updateFile(file.key, name = it) },
@@ -216,6 +254,7 @@ fun EditorScreen(
                                 )
                             }
                         }
+                      }
                     }
                     item(key = "add") {
                         OutlinedButton(onClick = vm::addFile, modifier = Modifier.fillMaxWidth()) {

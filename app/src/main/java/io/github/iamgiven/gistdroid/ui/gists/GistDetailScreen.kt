@@ -57,7 +57,16 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.iamgiven.gistdroid.data.applyOrder
 import io.github.iamgiven.gistdroid.data.remote.Gist
+import io.github.iamgiven.gistdroid.ui.components.DragHandleIcon
+import io.github.iamgiven.gistdroid.ui.components.fileCount
+import io.github.iamgiven.gistdroid.ui.components.moved
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import io.github.iamgiven.gistdroid.ui.appContainer
 import io.github.iamgiven.gistdroid.ui.appViewModel
 import io.github.iamgiven.gistdroid.ui.components.EmptyState
@@ -78,6 +87,7 @@ fun GistDetailScreen(
     val vm = appViewModel { GistDetailViewModel(it, id) }
     val state by vm.state.collectAsStateWithLifecycle()
     val localId by vm.localId.collectAsStateWithLifecycle()
+    val order by vm.order.collectAsStateWithLifecycle()
     val login by appContainer().settings.login.collectAsStateWithLifecycle(initialValue = null)
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -166,7 +176,7 @@ fun GistDetailScreen(
                     title = "Couldn't load gist",
                     message = state.error.orEmpty(),
                 ) { Button(onClick = vm::load) { Text("Retry") } }
-                else -> GistContent(gist, localId, onOpenLocal)
+                else -> GistContent(gist, order, localId, onOpenLocal, onReorder = vm::saveOrder)
             }
         }
     }
@@ -186,8 +196,26 @@ fun GistDetailScreen(
 }
 
 @Composable
-private fun GistContent(gist: Gist, localId: Long?, onOpenLocal: (Long) -> Unit) {
+private fun GistContent(
+    gist: Gist,
+    order: List<String>?,
+    localId: Long?,
+    onOpenLocal: (Long) -> Unit,
+    onReorder: (List<String>) -> Unit,
+) {
+    val lazyState = rememberLazyListState()
+    val haptics = LocalHapticFeedback.current
+    val savedNames = remember(gist, order) { applyOrder(gist.files.keys, order) }
+    var names by remember(savedNames) { mutableStateOf(savedNames) }
+    val reorderState = rememberReorderableLazyListState(lazyState) { from, to ->
+        val f = (from.key as? String)?.removePrefix(FILE_KEY) ?: return@rememberReorderableLazyListState
+        val t = (to.key as? String)?.takeIf { it.startsWith(FILE_KEY) }?.removePrefix(FILE_KEY)
+            ?: return@rememberReorderableLazyListState
+        names = names.moved(f, t)
+        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    }
     LazyColumn(
+        state = lazyState,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize(),
@@ -202,7 +230,7 @@ private fun GistContent(gist: Gist, localId: Long?, onOpenLocal: (Long) -> Unit)
                         if (gist.public) Icons.Outlined.Public else Icons.Outlined.Lock,
                         if (gist.public) "Public" else "Secret",
                     )
-                    MetaChip(Icons.Outlined.Description, "${gist.files.size} file")
+                    MetaChip(Icons.Outlined.Description, fileCount(gist.files.size))
                     MetaChip(Icons.Outlined.Schedule, relativeTime(parseIso(gist.updatedAt)))
                 }
                 if (localId != null) {
@@ -216,8 +244,28 @@ private fun GistContent(gist: Gist, localId: Long?, onOpenLocal: (Long) -> Unit)
                 }
             }
         }
-        items(gist.files.entries.toList(), key = { it.key }) { (name, file) ->
-            FileCard(filename = name, content = file.content.orEmpty(), language = file.language)
+        items(names, key = { FILE_KEY + it }) { name ->
+            val file = gist.files[name] ?: return@items
+            ReorderableItem(reorderState, key = FILE_KEY + name) { isDragging ->
+                FileCard(
+                    filename = name,
+                    content = file.content.orEmpty(),
+                    language = file.language,
+                    dragging = isDragging,
+                    dragHandle = if (names.size > 1) {
+                        {
+                            DragHandleIcon(
+                                Modifier.draggableHandle(
+                                    onDragStarted = { haptics.performHapticFeedback(HapticFeedbackType.LongPress) },
+                                    onDragStopped = { if (names != savedNames) onReorder(names) },
+                                )
+                            )
+                        }
+                    } else null,
+                )
+            }
         }
     }
 }
+
+private const val FILE_KEY = "file:"

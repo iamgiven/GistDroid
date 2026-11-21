@@ -1,6 +1,12 @@
 package io.github.iamgiven.gistdroid.ui.components
 
 import android.content.Context
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.ui.draw.shadow
+import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.WindowInsets
@@ -207,7 +213,14 @@ fun CodeView(code: String, filename: String, wrap: Boolean, maxLines: Int? = nul
 }
 
 @Composable
-fun FileCard(filename: String, content: String, language: String?, modifier: Modifier = Modifier) {
+fun FileCard(
+    filename: String,
+    content: String,
+    language: String?,
+    modifier: Modifier = Modifier,
+    dragging: Boolean = false,
+    dragHandle: (@Composable () -> Unit)? = null,
+) {
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
     val wrapDefault by appContainer().settings.wrapCode.collectAsStateWithLifecycle(initialValue = false)
@@ -219,14 +232,23 @@ fun FileCard(filename: String, content: String, language: String?, modifier: Mod
     var showAll by rememberSaveable(filename) { mutableStateOf(false) }
     val chevronRotation by animateFloatAsState(if (collapsed) -90f else 0f, label = "chevron")
 
-    OutlinedCard(modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+    val elevation by animateDpAsState(if (dragging) 8.dp else 0.dp, label = "dragElevation")
+    OutlinedCard(
+        modifier.fillMaxWidth().shadow(elevation, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = if (dragging) MaterialTheme.colorScheme.surfaceContainerHigh
+            else MaterialTheme.colorScheme.surface,
+        ),
+    ) {
         Row(
             Modifier
                 .fillMaxWidth()
                 .clickable { collapsed = !collapsed }
-                .padding(start = 8.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                .padding(start = if (dragHandle != null) 0.dp else 8.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            dragHandle?.invoke()
             Icon(
                 Icons.Default.ExpandMore,
                 if (collapsed) "Expand" else "Collapse",
@@ -293,17 +315,10 @@ fun FileCard(filename: String, content: String, language: String?, modifier: Mod
     }
 }
 
-/**
- * Top header for list screens: title + extra controls (search, filters) on a single surface,
- * so the whole header changes tint together when the list below is scrolled.
- */
+/** Top header for list screens: title + extra controls (search, filters), flat on the background. */
 @Composable
-fun ListHeader(title: String, elevated: Boolean, content: @Composable ColumnScope.() -> Unit) {
-    val color by animateColorAsState(
-        if (elevated) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.background,
-        label = "headerColor",
-    )
-    Surface(color = color) {
+fun ListHeader(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.background) {
         Column(
             Modifier
                 .fillMaxWidth()
@@ -319,6 +334,76 @@ fun ListHeader(title: String, elevated: Boolean, content: @Composable ColumnScop
         }
     }
 }
+
+/** Card used by both the gist list and the local snippet list. */
+@Composable
+fun SnippetCard(
+    title: String,
+    preview: AnnotatedString?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    previewPlaceholder: Boolean = false,
+    meta: @Composable RowScope.() -> Unit,
+) {
+    ElevatedCard(onClick = onClick, modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (preview != null || previewPlaceholder) {
+                Spacer(Modifier.height(10.dp))
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        preview ?: AnnotatedString("\n\n"),
+                        style = MonoStyle,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 3,
+                        minLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp), content = meta)
+        }
+    }
+}
+
+/** First three lines of [code], highlighted. */
+fun previewOf(code: String?, filename: String, colors: CodeColors): AnnotatedString? {
+    val text = code?.trim()?.lineSequence()?.take(3)?.joinToString("\n")
+    return if (text.isNullOrBlank()) null else SyntaxHighlighter.highlight(text, filename, colors)
+}
+
+@Composable
+fun DragHandleIcon(modifier: Modifier = Modifier) {
+    Box(modifier.size(40.dp), contentAlignment = Alignment.Center) {
+        Icon(
+            Icons.Default.DragIndicator,
+            "Drag to reorder",
+            Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Moves the element with key [from] to the position of [to]. */
+fun <T> List<T>.moved(from: T, to: T): List<T> {
+    val fromIdx = indexOf(from)
+    val toIdx = indexOf(to)
+    if (fromIdx < 0 || toIdx < 0 || fromIdx == toIdx) return this
+    return toMutableList().apply { add(toIdx, removeAt(fromIdx)) }
+}
+
+fun fileCount(n: Int) = if (n == 1) "1 file" else "$n files"
 
 @Composable
 fun SearchField(query: String, onQueryChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {

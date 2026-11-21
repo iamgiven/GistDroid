@@ -44,6 +44,9 @@ import io.github.iamgiven.gistdroid.data.local.Snippet
 import io.github.iamgiven.gistdroid.ui.appViewModel
 import io.github.iamgiven.gistdroid.ui.components.EmptyState
 import io.github.iamgiven.gistdroid.ui.components.ListHeader
+import io.github.iamgiven.gistdroid.ui.components.SnippetCard
+import io.github.iamgiven.gistdroid.ui.components.fileCount
+import io.github.iamgiven.gistdroid.ui.components.previewOf
 import io.github.iamgiven.gistdroid.ui.components.MetaChip
 import io.github.iamgiven.gistdroid.ui.components.MonoStyle
 import io.github.iamgiven.gistdroid.ui.components.SearchField
@@ -62,7 +65,7 @@ fun LocalListScreen(onOpen: (Long) -> Unit, onCreate: () -> Unit) {
 
     Scaffold(
         topBar = {
-            ListHeader("Local Snippets", elevated = listState.canScrollBackward) {
+            ListHeader("Local Snippets") {
                 SearchField(query, { vm.query.value = it }, "Search snippets…")
             }
         },
@@ -106,42 +109,13 @@ fun LocalListScreen(onOpen: (Long) -> Unit, onCreate: () -> Unit) {
 
 @Composable
 private fun SnippetItem(snippet: Snippet, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    ElevatedCard(onClick = onClick, modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                snippet.title,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            val first = snippet.files.firstOrNull()
-            val colors = rememberCodeColors()
-            val preview = remember(first, colors) {
-                val text = first?.content?.trim()?.lineSequence()?.take(3)?.joinToString("\n")
-                if (text.isNullOrBlank()) null else SyntaxHighlighter.highlight(text, first!!.name, colors)
-            }
-            if (preview != null) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        preview,
-                        style = MonoStyle,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    )
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                if (snippet.gistId != null) MetaChip(Icons.Outlined.CloudDone, "On Gist")
-                else MetaChip(Icons.Outlined.PhoneAndroid, "Local")
-                MetaChip(Icons.Outlined.Description, "${snippet.files.size} file")
-                MetaChip(Icons.Outlined.Schedule, relativeTime(snippet.updatedAt))
-            }
-        }
+    val colors = rememberCodeColors()
+    val first = snippet.files.firstOrNull()
+    val preview = remember(first, colors) { first?.let { previewOf(it.content, it.name, colors) } }
+    SnippetCard(title = snippet.title, preview = preview, onClick = onClick, modifier = modifier) {
+        if (snippet.gistId != null) MetaChip(Icons.Outlined.CloudDone, "On Gist")
+        else MetaChip(Icons.Outlined.PhoneAndroid, "Local")
+        MetaChip(Icons.Outlined.Description, fileCount(snippet.files.size))
+        MetaChip(Icons.Outlined.Schedule, relativeTime(snippet.updatedAt))
     }
 }

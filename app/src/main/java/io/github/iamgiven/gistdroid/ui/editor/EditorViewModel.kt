@@ -3,7 +3,10 @@ package io.github.iamgiven.gistdroid.ui.editor
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.iamgiven.gistdroid.AppContainer
+import io.github.iamgiven.gistdroid.data.applyOrder
 import io.github.iamgiven.gistdroid.data.local.Snippet
+import io.github.iamgiven.gistdroid.ui.components.moved
+import kotlinx.coroutines.flow.first
 import io.github.iamgiven.gistdroid.data.local.SnippetFile
 import io.github.iamgiven.gistdroid.data.remote.friendlyMessage
 import kotlinx.coroutines.CancellationException
@@ -78,12 +81,13 @@ class EditorViewModel(
                     EditorTarget.GIST -> {
                         val g = c.api.getGist(id)
                         originalNames = g.files.keys
+                        val names = applyOrder(g.files.keys, c.fileOrder.order(id).first())
                         _state.update {
                             it.copy(
                                 loading = false,
                                 description = g.description.orEmpty(),
                                 isPublic = g.public,
-                                files = g.files.map { (name, f) -> newFile(name, f.content.orEmpty()) },
+                                files = names.map { name -> newFile(name, g.files[name]?.content.orEmpty()) },
                             )
                         }
                     }
@@ -104,6 +108,11 @@ class EditorViewModel(
     fun setDescription(v: String) = _state.update { it.copy(description = v) }
     fun setPublic(v: Boolean) = _state.update { it.copy(isPublic = v) }
     fun addFile() = _state.update { it.copy(files = it.files + newFile()) }
+    fun moveFile(fromKey: Long, toKey: Long) = _state.update { s ->
+        val from = s.files.firstOrNull { it.key == fromKey }
+        val to = s.files.firstOrNull { it.key == toKey }
+        if (from == null || to == null) s else s.copy(files = s.files.moved(from, to))
+    }
     fun removeFile(key: Long) = _state.update { it.copy(files = it.files.filterNot { f -> f.key == key }) }
     fun updateFile(key: Long, name: String? = null, content: String? = null) = _state.update {
         it.copy(files = it.files.map { f ->
@@ -161,6 +170,7 @@ class EditorViewModel(
                         } else {
                             c.api.updateGist(id, s.description.trim(), files, originalNames)
                         }
+                        c.fileOrder.set(gist.id, files.map { it.first })
                         c.notifyGistChanged()
                         gist.id
                     }

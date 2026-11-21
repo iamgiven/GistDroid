@@ -10,7 +10,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import io.github.iamgiven.gistdroid.ui.components.DragHandleIcon
+import io.github.iamgiven.gistdroid.ui.components.fileCount
+import io.github.iamgiven.gistdroid.ui.components.moved
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
@@ -86,6 +94,16 @@ fun LocalDetailScreen(
     }
 
     val s = snippet
+    val lazyState = rememberLazyListState()
+    val haptics = LocalHapticFeedback.current
+    val savedFiles = s?.files.orEmpty()
+    var files by remember(savedFiles) { mutableStateOf(savedFiles) }
+    val reorderState = rememberReorderableLazyListState(lazyState) { from, to ->
+        val f = files.firstOrNull { FILE_KEY + it.name == from.key } ?: return@rememberReorderableLazyListState
+        val t = files.firstOrNull { FILE_KEY + it.name == to.key } ?: return@rememberReorderableLazyListState
+        files = files.moved(f, t)
+        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    }
     Scaffold(
         topBar = {
             Column {
@@ -132,6 +150,7 @@ fun LocalDetailScreen(
             return@Scaffold
         }
         LazyColumn(
+            state = lazyState,
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.padding(padding).fillMaxSize(),
@@ -148,7 +167,7 @@ fun LocalDetailScreen(
                             if (s.isPublic) Icons.Outlined.Public else Icons.Outlined.Lock,
                             if (s.isPublic) "Public" else "Secret",
                         )
-                        MetaChip(Icons.Outlined.Description, "${s.files.size} file")
+                        MetaChip(Icons.Outlined.Description, fileCount(s.files.size))
                     }
                     MetaChip(Icons.Outlined.Schedule, "Updated ${relativeTime(s.updatedAt)}")
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -166,8 +185,25 @@ fun LocalDetailScreen(
                     }
                 }
             }
-            itemsIndexed(s.files, key = { index, f -> "$index-${f.name}" }) { _, file ->
-                FileCard(filename = file.name, content = file.content, language = null)
+            items(files, key = { FILE_KEY + it.name }) { file ->
+                ReorderableItem(reorderState, key = FILE_KEY + file.name) { isDragging ->
+                    FileCard(
+                        filename = file.name,
+                        content = file.content,
+                        language = null,
+                        dragging = isDragging,
+                        dragHandle = if (files.size > 1) {
+                            {
+                                DragHandleIcon(
+                                    Modifier.draggableHandle(
+                                        onDragStarted = { haptics.performHapticFeedback(HapticFeedbackType.LongPress) },
+                                        onDragStopped = { if (files != savedFiles) vm.reorder(files) },
+                                    )
+                                )
+                            }
+                        } else null,
+                    )
+                }
             }
         }
     }
@@ -183,3 +219,5 @@ fun LocalDetailScreen(
         )
     }
 }
+
+private const val FILE_KEY = "file:"
