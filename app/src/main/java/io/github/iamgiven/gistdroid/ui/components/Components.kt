@@ -241,13 +241,15 @@ fun FileCard(
     val chevronRotation by animateFloatAsState(if (collapsed) -90f else 0f, label = "chevron")
 
     val elevation by animateDpAsState(if (dragging) 8.dp else 0.dp, label = "dragElevation")
+    val shape = RoundedCornerShape(24.dp)
     OutlinedCard(
-        modifier.fillMaxWidth().shadow(elevation, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp),
+        modifier.fillMaxWidth().shadow(elevation, shape),
+        shape = shape,
         colors = CardDefaults.outlinedCardColors(
             containerColor = if (dragging) MaterialTheme.colorScheme.surfaceContainerHigh
-            else MaterialTheme.colorScheme.surface,
+            else MaterialTheme.colorScheme.surfaceContainer,
         ),
+        border = cardBorder(),
     ) {
         Row(
             Modifier
@@ -295,19 +297,20 @@ fun FileCard(
         }
         AnimatedVisibility(visible = !collapsed, enter = expandVertically(), exit = shrinkVertically()) {
             Column {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
                 CodeView(
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerLow),
                     code = content,
                     filename = filename,
                     wrap = wrap,
                     maxLines = if (long && !showAll) PREVIEW_LINES else null,
                 )
                 if (long) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
                     TextButton(
                         onClick = { showAll = !showAll },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
+                        shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
                     ) {
                         Icon(
                             if (showAll) Icons.Default.UnfoldLess else Icons.Default.UnfoldMore,
@@ -323,80 +326,12 @@ fun FileCard(
     }
 }
 
-/** Top header for list screens: title + extra controls (search, filters), flat on the background. */
-@Composable
-fun ListHeader(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.background) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .windowInsetsPadding(
-                    WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
-                )
-                .padding(bottom = 8.dp)
-        ) {
-            Box(Modifier.height(64.dp).padding(horizontal = 16.dp), contentAlignment = Alignment.CenterStart) {
-                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            }
-            Column(Modifier.padding(horizontal = 16.dp), content = content)
-        }
-    }
-}
-
-/** Card used by both the gist list and the local snippet list. */
-@Composable
-fun SnippetCard(
-    title: String,
-    preview: AnnotatedString?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    previewPlaceholder: Boolean = false,
-    meta: @Composable RowScope.() -> Unit,
-) {
-    ElevatedCard(onClick = onClick, modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
-        Column(Modifier.padding(16.dp)) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (preview != null || previewPlaceholder) {
-                Spacer(Modifier.height(10.dp))
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth().animateContentSize(),
-                ) {
-                    Crossfade(targetState = preview, label = "preview") { text ->
-                        Box(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                            if (text == null) {
-                                SkeletonLines(listOf(0.8f, 0.55f, 0.68f))
-                            } else {
-                                Text(
-                                    text,
-                                    style = MonoStyle,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 3,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            Spacer(Modifier.height(14.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp), content = meta)
-        }
-    }
-}
-
 /** Spacing between list cards. */
 val CARD_GAP = 12.dp
 
 /** Pulsing placeholder color shared by skeleton elements. */
 @Composable
-private fun skeletonColor(): Color {
+internal fun skeletonColor(): Color {
     val transition = rememberInfiniteTransition(label = "skeleton")
     val alpha by transition.animateFloat(
         initialValue = 0.06f,
@@ -422,28 +357,6 @@ fun SkeletonLines(widths: List<Float>, lineHeight: TextUnit = MonoStyle.lineHeig
                         .background(color, RoundedCornerShape(4.dp))
                 )
             }
-        }
-    }
-}
-
-/** Placeholder shaped like [SnippetCard], shown while the list loads. */
-@Composable
-fun SkeletonCard() {
-    ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
-        Column(Modifier.padding(16.dp)) {
-            SkeletonLines(listOf(0.5f), MaterialTheme.typography.titleMedium.lineHeight)
-            Spacer(Modifier.height(10.dp))
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Box(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    SkeletonLines(listOf(0.8f, 0.55f, 0.68f))
-                }
-            }
-            Spacer(Modifier.height(14.dp))
-            SkeletonLines(listOf(0.7f), MaterialTheme.typography.labelMedium.lineHeight)
         }
     }
 }

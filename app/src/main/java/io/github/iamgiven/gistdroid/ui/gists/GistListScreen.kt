@@ -66,6 +66,8 @@ import io.github.iamgiven.gistdroid.ui.appViewModel
 import io.github.iamgiven.gistdroid.ui.components.EmptyState
 import io.github.iamgiven.gistdroid.ui.components.ListHeader
 import io.github.iamgiven.gistdroid.ui.components.CARD_GAP
+import io.github.iamgiven.gistdroid.ui.components.HEADER_GAP
+import androidx.compose.material.icons.outlined.Code
 import io.github.iamgiven.gistdroid.ui.components.SkeletonCard
 import io.github.iamgiven.gistdroid.ui.components.SnippetCard
 import io.github.iamgiven.gistdroid.ui.components.fileCount
@@ -123,7 +125,7 @@ fun GistListScreen(
                         enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
                         exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
                     ) {
-                        Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterOption("My gists", state.filter == GistFilter.MINE) { vm.setFilter(GistFilter.MINE) }
                             FilterOption("Starred", state.filter == GistFilter.STARRED) { vm.setFilter(GistFilter.STARRED) }
                         }
@@ -162,7 +164,7 @@ fun GistListScreen(
                         val items = state.visibleGists
                         when {
                             state.loading -> LazyColumn(
-                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = HEADER_GAP, bottom = 96.dp),
                                 verticalArrangement = Arrangement.spacedBy(CARD_GAP),
                                 userScrollEnabled = false,
                                 modifier = Modifier.fillMaxSize(),
@@ -183,7 +185,7 @@ fun GistListScreen(
                             )
                             else -> LazyColumn(
                                 state = listState,
-                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = HEADER_GAP, bottom = 96.dp),
                                 verticalArrangement = Arrangement.spacedBy(CARD_GAP),
                                 modifier = Modifier.fillMaxSize(),
                             ) {
@@ -243,15 +245,13 @@ private fun GistItem(
     val owner = gist.owner?.login
     SnippetCard(
         title = gist.title,
+        icon = Icons.Outlined.Code,
+        badge = if (gist.public) "Public" to true else "Secret" to false,
         preview = highlighted,
         previewPlaceholder = loadingPreview,
         onClick = onClick,
         modifier = modifier,
     ) {
-        MetaChip(
-            if (gist.public) Icons.Outlined.Public else Icons.Outlined.Lock,
-            if (gist.public) "Public" else "Secret",
-        )
         MetaChip(Icons.Outlined.Description, fileCount(gist.files.size))
         if (showOwner && owner != null) MetaChip(Icons.Outlined.Person, owner)
         else MetaChip(Icons.Outlined.Schedule, relativeTime(parseIso(gist.updatedAt)))

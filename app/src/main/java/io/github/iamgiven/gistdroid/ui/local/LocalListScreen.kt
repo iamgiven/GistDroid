@@ -45,6 +45,7 @@ import io.github.iamgiven.gistdroid.ui.appViewModel
 import io.github.iamgiven.gistdroid.ui.components.EmptyState
 import io.github.iamgiven.gistdroid.ui.components.ListHeader
 import io.github.iamgiven.gistdroid.ui.components.CARD_GAP
+import io.github.iamgiven.gistdroid.ui.components.HEADER_GAP
 import io.github.iamgiven.gistdroid.ui.components.SnippetCard
 import io.github.iamgiven.gistdroid.ui.components.fileCount
 import io.github.iamgiven.gistdroid.ui.components.previewOf
@@ -95,7 +96,7 @@ fun LocalListScreen(onOpen: (Long) -> Unit, onCreate: () -> Unit) {
                 )
                 else -> LazyColumn(
                     state = listState,
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = HEADER_GAP, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(CARD_GAP),
                     modifier = Modifier.fillMaxSize(),
                 ) {
@@ -113,9 +114,14 @@ private fun SnippetItem(snippet: Snippet, onClick: () -> Unit, modifier: Modifie
     val colors = rememberCodeColors()
     val first = snippet.files.firstOrNull()
     val preview = remember(first, colors) { first?.let { previewOf(it.content, it.name, colors) } }
-    SnippetCard(title = snippet.title, preview = preview, onClick = onClick, modifier = modifier) {
-        if (snippet.gistId != null) MetaChip(Icons.Outlined.CloudDone, "On Gist")
-        else MetaChip(Icons.Outlined.PhoneAndroid, "Local")
+    SnippetCard(
+        title = snippet.title,
+        icon = if (snippet.gistId != null) Icons.Outlined.CloudDone else Icons.Outlined.PhoneAndroid,
+        badge = if (snippet.gistId != null) "On Gist" to true else "Local" to false,
+        preview = preview,
+        onClick = onClick,
+        modifier = modifier,
+    ) {
         MetaChip(Icons.Outlined.Description, fileCount(snippet.files.size))
         MetaChip(Icons.Outlined.Schedule, relativeTime(snippet.updatedAt))
     }

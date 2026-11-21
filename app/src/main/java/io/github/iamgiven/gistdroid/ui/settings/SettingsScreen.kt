@@ -76,7 +76,12 @@ import io.github.iamgiven.gistdroid.AppContainer
 import io.github.iamgiven.gistdroid.data.ThemeMode
 import io.github.iamgiven.gistdroid.data.remote.friendlyMessage
 import io.github.iamgiven.gistdroid.ui.appViewModel
+import io.github.iamgiven.gistdroid.ui.components.CardShape
+import io.github.iamgiven.gistdroid.ui.components.ListHeader
 import io.github.iamgiven.gistdroid.ui.components.SectionLabel
+import io.github.iamgiven.gistdroid.ui.components.cardBorder
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -140,14 +145,19 @@ fun SettingsScreen() {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "-"
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Settings", fontWeight = FontWeight.SemiBold) }) }) { padding ->
+    Scaffold(topBar = { ListHeader("Settings") }) { padding ->
         LazyColumn(
             Modifier.padding(padding).fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
         ) {
             item { SectionLabel("GitHub account") }
             item {
-                ElevatedCard(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    shape = CardShape,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    border = cardBorder(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     val user = login
                     if (user != null) {
                         ListItem(
@@ -179,7 +189,12 @@ fun SettingsScreen() {
 
             item { SectionLabel("Appearance") }
             item {
-                ElevatedCard(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    shape = CardShape,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    border = cardBorder(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Outlined.Palette, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -226,7 +241,12 @@ fun SettingsScreen() {
 
             item { SectionLabel("About") }
             item {
-                ElevatedCard(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    shape = CardShape,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    border = cardBorder(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     ListItem(
                         headlineContent = { Text("GistDroid") },
                         supportingContent = { Text("Version $version · GitHub Gist client") },

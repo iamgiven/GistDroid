@@ -32,6 +32,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import io.github.iamgiven.gistdroid.ui.components.AppNavigationBar
+import io.github.iamgiven.gistdroid.ui.components.NavItem
 import io.github.iamgiven.gistdroid.ui.editor.EditorScreen
 import io.github.iamgiven.gistdroid.ui.editor.EditorTarget
 import io.github.iamgiven.gistdroid.ui.gists.GistDetailScreen
@@ -54,12 +56,10 @@ private object Routes {
     const val NEW = "new"
 }
 
-private data class TopLevel(val route: String, val label: String, val icon: ImageVector, val selectedIcon: ImageVector)
-
 private val topLevels = listOf(
-    TopLevel(Routes.GISTS, "Gist", Icons.Outlined.Cloud, Icons.Filled.Cloud),
-    TopLevel(Routes.LOCAL, "Local", Icons.Outlined.Inventory2, Icons.Filled.Inventory2),
-    TopLevel(Routes.SETTINGS, "Settings", Icons.Outlined.Settings, Icons.Filled.Settings),
+    NavItem(Routes.GISTS, "Gist", Icons.Outlined.Cloud, Icons.Filled.Cloud),
+    NavItem(Routes.LOCAL, "Local", Icons.Outlined.Inventory2, Icons.Filled.Inventory2),
+    NavItem(Routes.SETTINGS, "Settings", Icons.Outlined.Settings, Icons.Filled.Settings),
 )
 
 private fun NavHostController.navigateTopLevel(route: String) = navigate(route) {
@@ -86,16 +86,8 @@ fun GistDroidNavHost() {
         contentWindowInsets = WindowInsets(0),
         bottomBar = {
             AnimatedVisibility(showBar, enter = expandVertically(), exit = shrinkVertically()) {
-                NavigationBar {
-                    topLevels.forEach { item ->
-                        val selected = currentRoute == item.route
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = { if (!selected) nav.navigateTopLevel(item.route) },
-                            icon = { Icon(if (selected) item.selectedIcon else item.icon, null) },
-                            label = { Text(item.label) },
-                        )
-                    }
+                AppNavigationBar(topLevels, currentRoute) { item ->
+                    if (item.route != currentRoute) nav.navigateTopLevel(item.route)
                 }
             }
         },
