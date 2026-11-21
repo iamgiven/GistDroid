@@ -249,7 +249,7 @@ fun SkeletonCard() {
 fun DetailHeaderCard(
     badges: List<Pair<String, Boolean>>,
     description: String?,
-    meta: @Composable FlowRowScope.() -> Unit,
+    meta: @Composable () -> Unit,
     actions: (@Composable RowScope.() -> Unit)? = null,
 ) {
     Card(
@@ -274,8 +274,7 @@ fun DetailHeaderCard(
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                content = meta,
-            )
+            ) { meta() }
             if (actions != null) {
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), content = actions)
