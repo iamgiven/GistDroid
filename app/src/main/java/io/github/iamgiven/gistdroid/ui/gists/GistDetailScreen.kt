@@ -236,7 +236,7 @@ private fun GistContent(
             DetailHeaderCard(
                 badges = buildList {
                     add(visibilityBadge(gist.public))
-                    if (localId != null) add("Saved locally" tone BadgeTone.GREEN)
+                    if (localId != null) add("Saved locally" tone BadgeTone.NEUTRAL)
                 },
                 description = gist.description,
                 meta = {

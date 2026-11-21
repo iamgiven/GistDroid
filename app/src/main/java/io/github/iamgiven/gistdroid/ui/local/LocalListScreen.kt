@@ -121,7 +121,7 @@ private fun SnippetItem(snippet: Snippet, onClick: () -> Unit, modifier: Modifie
     SnippetCard(
         title = snippet.title,
         icon = if (snippet.gistId != null) Icons.Outlined.CloudDone else Icons.Outlined.PhoneAndroid,
-        badge = if (snippet.gistId != null) "On Gist" tone BadgeTone.BLUE else "Local" tone BadgeTone.GREEN,
+        badge = if (snippet.gistId != null) "On Gist" tone BadgeTone.BLUE else "Local" tone BadgeTone.NEUTRAL,
         preview = preview,
         onClick = onClick,
         modifier = modifier,

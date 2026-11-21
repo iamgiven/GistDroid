@@ -171,7 +171,7 @@ fun LocalDetailScreen(
                 val gistId = s.gistId
                 DetailHeaderCard(
                     badges = listOf(
-                        if (gistId != null) "On Gist" tone BadgeTone.BLUE else "Local only" tone BadgeTone.GREEN,
+                        if (gistId != null) "On Gist" tone BadgeTone.BLUE else "Local only" tone BadgeTone.NEUTRAL,
                         visibilityBadge(s.isPublic),
                     ),
                     description = s.description,
