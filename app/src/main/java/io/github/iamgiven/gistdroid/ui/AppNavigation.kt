@@ -34,6 +34,7 @@ import androidx.navigation.navArgument
 import io.github.iamgiven.gistdroid.ui.components.AppNavigationBar
 import io.github.iamgiven.gistdroid.ui.components.NavItem
 import io.github.iamgiven.gistdroid.ui.editor.EditorScreen
+import io.github.iamgiven.gistdroid.ui.viewer.CodeViewerScreen
 import io.github.iamgiven.gistdroid.ui.editor.EditorTarget
 import io.github.iamgiven.gistdroid.ui.gists.GistDetailScreen
 import io.github.iamgiven.gistdroid.ui.gists.GistListScreen
@@ -48,6 +49,7 @@ private object Routes {
     const val GIST_DETAIL = "gist/{id}"
     const val LOCAL_DETAIL = "snippet/{id}"
     const val EDITOR = "editor/{target}/{id}"
+    const val VIEWER = "viewer"
 
     fun gist(id: String) = "gist/$id"
     fun snippet(id: Long) = "snippet/$id"
@@ -121,6 +123,7 @@ fun GistDroidNavHost() {
                     onBack = { nav.popBackStack() },
                     onEdit = { nav.navigate(Routes.editor(EditorTarget.GIST, id)) },
                     onOpenLocal = { nav.navigate(Routes.snippet(it)) },
+                    onViewFile = { container.viewerFile.value = it; nav.navigate(Routes.VIEWER) },
                 )
             }
             composable(
@@ -133,8 +136,10 @@ fun GistDroidNavHost() {
                     onBack = { nav.popBackStack() },
                     onEdit = { nav.navigate(Routes.editor(EditorTarget.LOCAL, id.toString())) },
                     onOpenGist = { nav.navigate(Routes.gist(it)) },
+                    onViewFile = { container.viewerFile.value = it; nav.navigate(Routes.VIEWER) },
                 )
             }
+            composable(Routes.VIEWER) { CodeViewerScreen(onBack = { nav.popBackStack() }) }
             composable(Routes.EDITOR) { entry ->
                 val target = EditorTarget.valueOf(entry.arguments?.getString("target") ?: EditorTarget.LOCAL.name)
                 val id = entry.arguments?.getString("id")?.takeIf { it != Routes.NEW }

@@ -1,6 +1,7 @@
 package io.github.iamgiven.gistdroid.ui.components
 
 import android.content.Context
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
@@ -229,6 +230,7 @@ fun FileCard(
     modifier: Modifier = Modifier,
     dragging: Boolean = false,
     dragHandle: (@Composable () -> Unit)? = null,
+    onFullscreen: (() -> Unit)? = null,
 ) {
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
@@ -297,6 +299,11 @@ fun FileCard(
                 context.toast("$filename copied")
             }) {
                 Icon(Icons.Default.ContentCopy, "Copy", Modifier.size(20.dp))
+            }
+            if (onFullscreen != null) {
+                IconButton(onClick = onFullscreen) {
+                    Icon(Icons.Default.Fullscreen, "Full screen", Modifier.size(22.dp))
+                }
             }
         }
         if (!collapsed) {

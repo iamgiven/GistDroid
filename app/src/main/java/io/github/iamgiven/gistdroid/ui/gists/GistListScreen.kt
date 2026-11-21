@@ -75,6 +75,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material.icons.outlined.Code
 import io.github.iamgiven.gistdroid.ui.components.SkeletonCard
 import io.github.iamgiven.gistdroid.ui.components.SnippetCard
+import io.github.iamgiven.gistdroid.ui.components.visibilityBadge
 import io.github.iamgiven.gistdroid.ui.components.fileCount
 import io.github.iamgiven.gistdroid.ui.components.previewOf
 import io.github.iamgiven.gistdroid.ui.components.rememberCodeColors
@@ -242,7 +243,7 @@ private fun GistItem(
     SnippetCard(
         title = gist.title,
         icon = Icons.Outlined.Code,
-        badge = if (gist.public) "Public" to true else "Secret" to false,
+        badge = visibilityBadge(gist.public),
         preview = highlighted,
         previewPlaceholder = loadingPreview,
         onClick = onClick,

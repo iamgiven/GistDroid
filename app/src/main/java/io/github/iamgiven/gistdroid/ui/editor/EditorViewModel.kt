@@ -107,7 +107,12 @@ class EditorViewModel(
 
     fun setDescription(v: String) = _state.update { it.copy(description = v) }
     fun setPublic(v: Boolean) = _state.update { it.copy(isPublic = v) }
-    fun addFile() = _state.update { it.copy(files = it.files + newFile()) }
+    /** Adds an empty file and returns its key. */
+    fun addFile(): Long {
+        val file = newFile()
+        _state.update { it.copy(files = it.files + file) }
+        return file.key
+    }
     fun moveFile(fromKey: Long, toKey: Long) = _state.update { s ->
         val from = s.files.firstOrNull { it.key == fromKey }
         val to = s.files.firstOrNull { it.key == toKey }

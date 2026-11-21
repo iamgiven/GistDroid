@@ -57,9 +57,13 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.iamgiven.gistdroid.ViewerFile
 import io.github.iamgiven.gistdroid.data.applyOrder
 import io.github.iamgiven.gistdroid.data.remote.Gist
+import io.github.iamgiven.gistdroid.ui.components.BadgeTone
 import io.github.iamgiven.gistdroid.ui.components.DetailHeaderCard
+import io.github.iamgiven.gistdroid.ui.components.tone
+import io.github.iamgiven.gistdroid.ui.components.visibilityBadge
 import io.github.iamgiven.gistdroid.ui.components.DragHandleIcon
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
@@ -89,6 +93,7 @@ fun GistDetailScreen(
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onOpenLocal: (Long) -> Unit,
+    onViewFile: (ViewerFile) -> Unit,
 ) {
     val vm = appViewModel { GistDetailViewModel(it, id) }
     val state by vm.state.collectAsStateWithLifecycle()
@@ -182,7 +187,7 @@ fun GistDetailScreen(
                     title = "Couldn't load gist",
                     message = state.error.orEmpty(),
                 ) { Button(onClick = vm::load) { Text("Retry") } }
-                else -> GistContent(gist, order, localId, onOpenLocal, onReorder = vm::saveOrder)
+                else -> GistContent(gist, order, localId, onOpenLocal, onReorder = vm::saveOrder, onViewFile = onViewFile)
             }
         }
     }
@@ -208,6 +213,7 @@ private fun GistContent(
     localId: Long?,
     onOpenLocal: (Long) -> Unit,
     onReorder: (List<String>) -> Unit,
+    onViewFile: (ViewerFile) -> Unit,
 ) {
     val lazyState = rememberLazyListState()
     val haptics = LocalHapticFeedback.current
@@ -229,8 +235,8 @@ private fun GistContent(
         item {
             DetailHeaderCard(
                 badges = buildList {
-                    add((if (gist.public) "Public" else "Secret") to gist.public)
-                    if (localId != null) add("Saved locally" to false)
+                    add(visibilityBadge(gist.public))
+                    if (localId != null) add("Saved locally" tone BadgeTone.GREEN)
                 },
                 description = gist.description,
                 meta = {
@@ -257,6 +263,7 @@ private fun GistContent(
                     content = file.content.orEmpty(),
                     language = file.language,
                     dragging = isDragging,
+                    onFullscreen = { onViewFile(ViewerFile(name, file.content.orEmpty(), file.language)) },
                     dragHandle = if (names.size > 1) {
                         {
                             DragHandleIcon(

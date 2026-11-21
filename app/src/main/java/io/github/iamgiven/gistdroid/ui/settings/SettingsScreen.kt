@@ -32,6 +32,7 @@ import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
@@ -139,6 +140,19 @@ fun SettingsScreen() {
     val dynamic by vm.dynamic.collectAsStateWithLifecycle()
     val wrapCode by vm.wrapCode.collectAsStateWithLifecycle()
     val connect by vm.connect.collectAsStateWithLifecycle()
+    var confirmSignOut by remember { mutableStateOf(false) }
+    if (confirmSignOut) {
+        AlertDialog(
+            onDismissRequest = { confirmSignOut = false },
+            icon = { Icon(Icons.AutoMirrored.Filled.Logout, null) },
+            title = { Text("Sign out?") },
+            text = {
+                Text("Your token will be removed from this device. Local snippets are kept. You'll need a token to connect again.")
+            },
+            confirmButton = { TextButton(onClick = { confirmSignOut = false; vm.logout() }) { Text("Sign out") } },
+            dismissButton = { TextButton(onClick = { confirmSignOut = false }) { Text("Cancel") } },
+        )
+    }
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
     val version = remember {
@@ -165,7 +179,7 @@ fun SettingsScreen() {
                             supportingContent = { Text("Connected to GitHub") },
                             leadingContent = { Avatar(user) },
                             trailingContent = {
-                                TextButton(onClick = { vm.logout() }) {
+                                TextButton(onClick = { confirmSignOut = true }) {
                                     Icon(Icons.AutoMirrored.Filled.Logout, null, Modifier.size(18.dp))
                                     Spacer(Modifier.width(6.dp))
                                     Text("Sign out")

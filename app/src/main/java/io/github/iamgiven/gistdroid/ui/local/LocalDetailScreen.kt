@@ -14,7 +14,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import io.github.iamgiven.gistdroid.ui.components.BadgeTone
 import io.github.iamgiven.gistdroid.ui.components.DetailHeaderCard
+import io.github.iamgiven.gistdroid.ui.theme.LocalFabColors
+import androidx.compose.material3.Button
+import io.github.iamgiven.gistdroid.ui.components.tone
+import io.github.iamgiven.gistdroid.ui.components.visibilityBadge
 import io.github.iamgiven.gistdroid.ui.components.DragHandleIcon
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
@@ -67,6 +72,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.iamgiven.gistdroid.ViewerFile
 import io.github.iamgiven.gistdroid.ui.appViewModel
 import io.github.iamgiven.gistdroid.ui.components.FileCard
 import io.github.iamgiven.gistdroid.ui.components.MetaChip
@@ -80,6 +86,7 @@ fun LocalDetailScreen(
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onOpenGist: (String) -> Unit,
+    onViewFile: (ViewerFile) -> Unit,
 ) {
     val vm = appViewModel { LocalDetailViewModel(it, id) }
     val snippet by vm.snippet.collectAsStateWithLifecycle()
@@ -88,6 +95,7 @@ fun LocalDetailScreen(
     val context = LocalContext.current
     var menuOpen by remember { mutableStateOf(false) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    var confirmUpload by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(state.deleted) { if (state.deleted) onBack() }
     LaunchedEffect(state.message) {
@@ -163,8 +171,8 @@ fun LocalDetailScreen(
                 val gistId = s.gistId
                 DetailHeaderCard(
                     badges = listOf(
-                        (if (gistId != null) "On Gist" else "Local only") to (gistId != null),
-                        (if (s.isPublic) "Public" else "Secret") to s.isPublic,
+                        if (gistId != null) "On Gist" tone BadgeTone.BLUE else "Local only" tone BadgeTone.GREEN,
+                        visibilityBadge(s.isPublic),
                     ),
                     description = s.description,
                     meta = {
@@ -172,7 +180,14 @@ fun LocalDetailScreen(
                         MetaChip(Icons.Outlined.Schedule, "Updated ${relativeTime(s.updatedAt)}")
                     },
                     actions = {
-                        FilledTonalButton(onClick = vm::upload, enabled = !state.busy) {
+                        Button(
+                            onClick = { confirmUpload = true },
+                            enabled = !state.busy,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = LocalFabColors.current.container,
+                                contentColor = LocalFabColors.current.content,
+                            ),
+                        ) {
                             Icon(Icons.Default.CloudUpload, null, Modifier.size(ButtonDefaults.IconSize))
                             Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                             Text(if (gistId != null) "Sync to Gist" else "Upload to Gist")
@@ -194,6 +209,7 @@ fun LocalDetailScreen(
                         content = file.content,
                         language = null,
                         dragging = isDragging,
+                        onFullscreen = { onViewFile(ViewerFile(file.name, file.content, null)) },
                         dragHandle = if (files.size > 1) {
                             {
                                 DragHandleIcon(
@@ -208,6 +224,26 @@ fun LocalDetailScreen(
                 }
             }
         }
+    }
+
+    if (confirmUpload && s != null) {
+        val linked = s.gistId != null
+        AlertDialog(
+            onDismissRequest = { confirmUpload = false },
+            icon = { Icon(Icons.Default.CloudUpload, null) },
+            title = { Text(if (linked) "Sync to Gist?" else "Upload to Gist?") },
+            text = {
+                Text(
+                    if (linked) "The linked gist on GitHub will be overwritten with this snippet's description and files."
+                    else "A new ${if (s.isPublic) "public" else "secret"} gist will be created on your GitHub account" +
+                        " with ${fileCount(s.files.size)}."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { confirmUpload = false; vm.upload() }) { Text(if (linked) "Sync" else "Upload") }
+            },
+            dismissButton = { TextButton(onClick = { confirmUpload = false }) { Text("Cancel") } },
+        )
     }
 
     if (confirmDelete) {

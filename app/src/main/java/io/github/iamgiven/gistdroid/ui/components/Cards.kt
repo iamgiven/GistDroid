@@ -46,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -112,14 +113,34 @@ fun ListHeader(title: String, content: (@Composable ColumnScope.() -> Unit)? = n
 /** Gap between the header title and the search field; also used below the search field. */
 val HEADER_GAP = 12.dp
 
-/** Small outlined status pill, e.g. "● PUBLIC". [active] uses the primary color. */
+enum class BadgeTone { BLUE, RED, GREEN, NEUTRAL }
+
+data class Badge(val text: String, val tone: BadgeTone)
+
+infix fun String.tone(tone: BadgeTone) = Badge(this, tone)
+
+/** Badge for a gist's visibility: public = blue, secret = red. */
+fun visibilityBadge(public: Boolean) = if (public) "Public" tone BadgeTone.BLUE else "Secret" tone BadgeTone.RED
+
 @Composable
-fun StatusBadge(text: String, active: Boolean) {
-    val fg = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+private fun BadgeTone.color(): Color {
+    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    return when (this) {
+        BadgeTone.BLUE -> MaterialTheme.colorScheme.primary
+        BadgeTone.RED -> if (dark) Color(0xFFFF7B72) else Color(0xFFCF222E)
+        BadgeTone.GREEN -> if (dark) Color(0xFF3FB950) else Color(0xFF1A7F37)
+        BadgeTone.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+}
+
+/** Small outlined status pill, e.g. "● PUBLIC", tinted by its [BadgeTone]. */
+@Composable
+fun StatusBadge(badge: Badge) {
+    val text = badge.text
+    val fg = badge.tone.color()
     Surface(
         shape = CircleShape,
-        color = if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
-        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f),
+        color = fg.copy(alpha = 0.10f),
         border = BorderStroke(1.dp, fg.copy(alpha = 0.35f)),
     ) {
         Row(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -141,7 +162,7 @@ fun StatusBadge(text: String, active: Boolean) {
 fun SnippetCard(
     title: String,
     icon: ImageVector,
-    badge: Pair<String, Boolean>?,
+    badge: Badge?,
     preview: AnnotatedString?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -169,7 +190,7 @@ fun SnippetCard(
                 )
                 if (badge != null) {
                     Spacer(Modifier.width(10.dp))
-                    StatusBadge(badge.first, badge.second)
+                    StatusBadge(badge)
                 }
             }
             HorizontalDivider(
@@ -247,7 +268,7 @@ fun SkeletonCard() {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DetailHeaderCard(
-    badges: List<Pair<String, Boolean>>,
+    badges: List<Badge>,
     description: String?,
     meta: @Composable () -> Unit,
     actions: (@Composable RowScope.() -> Unit)? = null,
@@ -262,7 +283,7 @@ fun DetailHeaderCard(
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) { badges.forEach { (text, active) -> StatusBadge(text, active) } }
+            ) { badges.forEach { StatusBadge(it) } }
             if (!description.isNullOrBlank()) {
                 Spacer(Modifier.height(12.dp))
                 Text(description, style = MaterialTheme.typography.bodyLarge)

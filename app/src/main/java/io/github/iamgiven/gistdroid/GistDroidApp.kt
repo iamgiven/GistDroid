@@ -32,6 +32,9 @@ class GistDroidApp : Application() {
 
 data class SharedText(val subject: String?, val text: String)
 
+/** File opened in the full-screen code viewer. */
+data class ViewerFile(val filename: String, val content: String, val language: String?)
+
 class AppContainer(context: Context) {
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val settings = SettingsStore(context)
@@ -65,6 +68,8 @@ class AppContainer(context: Context) {
             }
         }
     }
+
+    val viewerFile = MutableStateFlow<ViewerFile?>(null)
 
     /** Text shared from another app, waiting to be opened in the editor. */
     val pendingShare = MutableStateFlow<SharedText?>(null)

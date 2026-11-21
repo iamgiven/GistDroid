@@ -46,7 +46,9 @@ import io.github.iamgiven.gistdroid.ui.theme.LocalFabColors
 import io.github.iamgiven.gistdroid.ui.components.EmptyState
 import io.github.iamgiven.gistdroid.ui.components.ListHeader
 import io.github.iamgiven.gistdroid.ui.components.CARD_GAP
+import io.github.iamgiven.gistdroid.ui.components.BadgeTone
 import io.github.iamgiven.gistdroid.ui.components.SnippetCard
+import io.github.iamgiven.gistdroid.ui.components.tone
 import io.github.iamgiven.gistdroid.ui.components.fileCount
 import io.github.iamgiven.gistdroid.ui.components.previewOf
 import io.github.iamgiven.gistdroid.ui.components.MetaChip
@@ -119,7 +121,7 @@ private fun SnippetItem(snippet: Snippet, onClick: () -> Unit, modifier: Modifie
     SnippetCard(
         title = snippet.title,
         icon = if (snippet.gistId != null) Icons.Outlined.CloudDone else Icons.Outlined.PhoneAndroid,
-        badge = if (snippet.gistId != null) "On Gist" to true else "Local" to false,
+        badge = if (snippet.gistId != null) "On Gist" tone BadgeTone.BLUE else "Local" tone BadgeTone.GREEN,
         preview = preview,
         onClick = onClick,
         modifier = modifier,
