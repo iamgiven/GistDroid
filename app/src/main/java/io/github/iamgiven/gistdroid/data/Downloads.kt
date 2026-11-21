@@ -1,6 +1,9 @@
 package io.github.iamgiven.gistdroid.data
 
+import android.content.ClipData
 import android.content.ContentValues
+import android.content.Intent
+import androidx.core.content.FileProvider
 import android.content.Context
 import android.os.Build
 import android.os.Environment
@@ -54,4 +57,30 @@ suspend fun saveToDownloads(context: Context, filename: String, content: String)
         file.writeText(content)
         file.name
     }
+}
+
+/**
+ * Shares [content] as an actual file named [filename] (via a FileProvider URI to a cache copy),
+ * so receiving apps get an attachment instead of plain text.
+ */
+suspend fun shareAsFile(context: Context, filename: String, content: String) {
+    val name = filename.ifBlank { "snippet.txt" }.replace('/', '_')
+    val file = withContext(Dispatchers.IO) {
+        val dir = File(context.cacheDir, "shared").apply {
+            mkdirs()
+            listFiles()?.forEach { it.delete() } // keep only the latest shared file
+        }
+        File(dir, name).apply { writeText(content) }
+    }
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+    val ext = name.substringAfterLast('.', "").lowercase()
+    val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: "text/plain"
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = mime
+        putExtra(Intent.EXTRA_STREAM, uri)
+        putExtra(Intent.EXTRA_SUBJECT, name)
+        clipData = ClipData.newRawUri(name, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(Intent.createChooser(intent, "Share file"))
 }

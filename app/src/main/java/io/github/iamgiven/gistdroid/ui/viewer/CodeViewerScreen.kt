@@ -1,6 +1,12 @@
 package io.github.iamgiven.gistdroid.ui.viewer
 
 import android.Manifest
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Surface
+import androidx.compose.ui.text.style.TextAlign
+import io.github.iamgiven.gistdroid.data.shareAsFile
 import android.content.pm.PackageManager
 import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -97,6 +103,7 @@ fun CodeViewerScreen(onBack: () -> Unit, onEdit: (EditSource, String) -> Unit) {
     val wrap = wrapOverride ?: wrapDefault
     var infoOpen by remember { mutableStateOf(false) }
     var moreOpen by remember { mutableStateOf(false) }
+    var confirmDownload by remember { mutableStateOf(false) }
     val fontSize by container.settings.codeFontSize.collectAsStateWithLifecycle(initialValue = DEFAULT_CODE_FONT_SIZE)
     val scope = rememberCoroutineScope()
     val clipboard = LocalClipboardManager.current
@@ -157,21 +164,24 @@ fun CodeViewerScreen(onBack: () -> Unit, onEdit: (EditSource, String) -> Unit) {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                 },
                 actions = {
+                    // All three actions share one size so they're evenly spaced.
                     IconButton(
                         onClick = {
                             clipboard.setText(AnnotatedString(f.content))
                             context.toast("${f.filename} copied")
                         },
-                        modifier = Modifier.size(40.dp),
+                        modifier = Modifier.size(ACTION_SIZE),
                     ) { Icon(Icons.Default.ContentCopy, "Copy") }
                     val source = f.edit
                     if (source != null) {
-                        IconButton(onClick = { onEdit(source, f.filename) }, modifier = Modifier.size(40.dp)) {
+                        IconButton(onClick = { onEdit(source, f.filename) }, modifier = Modifier.size(ACTION_SIZE)) {
                             Icon(Icons.Outlined.Edit, "Edit")
                         }
                     }
-                    Box {
-                        IconButton(onClick = { moreOpen = true }) { Icon(Icons.Default.MoreVert, "More") }
+                    Box(Modifier.padding(end = 4.dp)) {
+                        IconButton(onClick = { moreOpen = true }, modifier = Modifier.size(ACTION_SIZE)) {
+                            Icon(Icons.Default.MoreVert, "More")
+                        }
                         DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
                             DropdownMenuItem(
                                 text = { Text("Wrap lines") },
@@ -179,9 +189,11 @@ fun CodeViewerScreen(onBack: () -> Unit, onEdit: (EditSource, String) -> Unit) {
                                 trailingIcon = { Checkbox(checked = wrap, onCheckedChange = null) },
                                 onClick = { wrapOverride = !wrap },
                             )
-                            // Text size: stays open so it can be tapped repeatedly.
+                            // Text size stepper; the menu stays open so it can be tapped repeatedly.
                             Row(
-                                Modifier.padding(start = 12.dp, end = 4.dp),
+                                Modifier
+                                    .height(48.dp)
+                                    .padding(start = 12.dp, end = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(
@@ -190,37 +202,57 @@ fun CodeViewerScreen(onBack: () -> Unit, onEdit: (EditSource, String) -> Unit) {
                                 )
                                 Spacer(Modifier.width(12.dp))
                                 Text(
-                                    "${fontSize.toInt()} sp",
+                                    "Text size",
                                     style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.width(48.dp),
+                                    modifier = Modifier.weight(1f),
                                 )
-                                IconButton(
-                                    onClick = { scope.launch { container.settings.setCodeFontSize(fontSize - 1) } },
-                                    enabled = fontSize > MIN_CODE_FONT_SIZE,
-                                ) { Icon(Icons.Default.ZoomOut, "Zoom out") }
-                                IconButton(
-                                    onClick = { scope.launch { container.settings.setCodeFontSize(fontSize + 1) } },
-                                    enabled = fontSize < MAX_CODE_FONT_SIZE,
-                                ) { Icon(Icons.Default.ZoomIn, "Zoom in") }
+                                Spacer(Modifier.width(8.dp))
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconButton(
+                                            onClick = { scope.launch { container.settings.setCodeFontSize(fontSize - 1) } },
+                                            enabled = fontSize > MIN_CODE_FONT_SIZE,
+                                            modifier = Modifier.size(36.dp),
+                                        ) { Icon(Icons.Default.ZoomOut, "Zoom out", Modifier.size(20.dp)) }
+                                        Text(
+                                            fontSize.toInt().toString(),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.width(24.dp),
+                                        )
+                                        IconButton(
+                                            onClick = { scope.launch { container.settings.setCodeFontSize(fontSize + 1) } },
+                                            enabled = fontSize < MAX_CODE_FONT_SIZE,
+                                            modifier = Modifier.size(36.dp),
+                                        ) { Icon(Icons.Default.ZoomIn, "Zoom in", Modifier.size(20.dp)) }
+                                    }
+                                }
                             }
-                            HorizontalDivider()
+                            HorizontalDivider(Modifier.padding(vertical = 4.dp))
                             DropdownMenuItem(
                                 text = { Text("Download") },
                                 leadingIcon = { Icon(Icons.Default.Download, null) },
                                 onClick = {
                                     moreOpen = false
-                                    if (needsLegacyStoragePermission && ContextCompat.checkSelfPermission(
-                                            context, Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                                        ) != PackageManager.PERMISSION_GRANTED
-                                    ) {
-                                        permissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                                    } else {
-                                        download()
+                                    confirmDownload = true
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Share file") },
+                                leadingIcon = { Icon(Icons.Default.AttachFile, null) },
+                                onClick = {
+                                    moreOpen = false
+                                    scope.launch {
+                                        runCatching { shareAsFile(context, f.filename, f.content) }
+                                            .onFailure { context.toast("Couldn't share: ${it.message}") }
                                     }
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("Share") },
+                                text = { Text("Share content") },
                                 leadingIcon = { Icon(Icons.Default.Share, null) },
                                 onClick = {
                                     moreOpen = false
@@ -243,7 +275,39 @@ fun CodeViewerScreen(onBack: () -> Unit, onEdit: (EditSource, String) -> Unit) {
             CodeView(code = f.content, filename = f.filename, wrap = wrap, style = monoStyle(fontSize))
         }
     }
+
+    if (confirmDownload) {
+        DownloadDialog(
+            filename = f.filename,
+            onDismiss = { confirmDownload = false },
+            onConfirm = {
+                confirmDownload = false
+                if (needsLegacyStoragePermission && ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    permissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                } else {
+                    download()
+                }
+            },
+        )
+    }
 }
+
+@Composable
+private fun DownloadDialog(filename: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.Download, null) },
+        title = { Text("Download file?") },
+        text = { Text("\"$filename\" will be saved to the Download folder on this device.") },
+        confirmButton = { TextButton(onClick = onConfirm) { Text("Download") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+private val ACTION_SIZE = 44.dp
 
 /** Small card with details about the file and its gist's revision history. */
 @Composable
