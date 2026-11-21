@@ -20,6 +20,10 @@ import kotlinx.coroutines.launch
 class LocalListViewModel(c: AppContainer) : ViewModel() {
     val query = MutableStateFlow("")
 
+    init {
+        viewModelScope.launch { c.verifyGistLinks() }
+    }
+
     /** null = still loading. */
     val snippets: StateFlow<List<Snippet>?> = combine(c.snippetDao.observeAll(), query) { list, q ->
         if (q.isBlank()) list else list.filter { s ->
@@ -42,6 +46,12 @@ class LocalDetailViewModel(private val c: AppContainer, private val id: Long) : 
 
     private val _state = MutableStateFlow(LocalDetailState())
     val state: StateFlow<LocalDetailState> = _state.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            c.snippetDao.get(id)?.gistId?.let { c.verifyGistLinks(listOf(it)) }
+        }
+    }
 
     fun delete() {
         viewModelScope.launch {

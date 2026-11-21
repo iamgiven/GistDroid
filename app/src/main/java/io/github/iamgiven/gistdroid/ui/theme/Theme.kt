@@ -74,10 +74,10 @@ private val DarkColors = darkColorScheme(
     surfaceContainerHighest = Color(0xFF2F3636),
 )
 
-/** Colors for the main FAB: always the dark scheme's deep blue container, in both themes. */
+/** Colors for the main FAB: the light scheme's deep primary (as on the light nav bar) with white content, in both themes. */
 data class FabColors(val container: Color, val content: Color)
 
-val LocalFabColors = staticCompositionLocalOf { FabColors(DarkColors.primaryContainer, DarkColors.onPrimaryContainer) }
+val LocalFabColors = staticCompositionLocalOf { FabColors(LightColors.primary, Color.White) }
 
 @Composable
 fun GistDroidTheme(
@@ -109,10 +109,10 @@ fun GistDroidTheme(
         }
     }
 
-    val darkScheme = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        dynamicDarkColorScheme(context)
-    } else DarkColors
-    val fab = FabColors(darkScheme.primaryContainer, darkScheme.onPrimaryContainer)
+    val lightScheme = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        dynamicLightColorScheme(context)
+    } else LightColors
+    val fab = FabColors(lightScheme.primary, Color.White)
 
     CompositionLocalProvider(LocalFabColors provides fab) {
         MaterialTheme(colorScheme = colors, content = content)

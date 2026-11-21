@@ -14,7 +14,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import io.github.iamgiven.gistdroid.ui.components.DetailHeaderCard
 import io.github.iamgiven.gistdroid.ui.components.DragHandleIcon
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ButtonDefaults
 import io.github.iamgiven.gistdroid.ui.components.fileCount
 import io.github.iamgiven.gistdroid.ui.components.moved
 import sh.calvin.reorderable.ReorderableItem
@@ -156,34 +160,32 @@ fun LocalDetailScreen(
             modifier = Modifier.padding(padding).fillMaxSize(),
         ) {
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (s.description.isNotBlank()) {
-                        Text(s.description, style = MaterialTheme.typography.bodyLarge)
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        if (s.gistId != null) MetaChip(Icons.Outlined.CloudDone, "Linked to Gist")
-                        else MetaChip(Icons.Outlined.PhoneAndroid, "Local only")
-                        MetaChip(
-                            if (s.isPublic) Icons.Outlined.Public else Icons.Outlined.Lock,
-                            if (s.isPublic) "Public" else "Secret",
-                        )
+                val gistId = s.gistId
+                DetailHeaderCard(
+                    badges = listOf(
+                        (if (gistId != null) "On Gist" else "Local only") to (gistId != null),
+                        (if (s.isPublic) "Public" else "Secret") to s.isPublic,
+                    ),
+                    description = s.description,
+                    meta = {
                         MetaChip(Icons.Outlined.Description, fileCount(s.files.size))
-                    }
-                    MetaChip(Icons.Outlined.Schedule, "Updated ${relativeTime(s.updatedAt)}")
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        MetaChip(Icons.Outlined.Schedule, "Updated ${relativeTime(s.updatedAt)}")
+                    },
+                    actions = {
                         FilledTonalButton(onClick = vm::upload, enabled = !state.busy) {
-                            Icon(Icons.Default.CloudUpload, null, Modifier.size(18.dp))
-                            Text(if (s.gistId != null) "  Sync to Gist" else "  Upload to Gist")
+                            Icon(Icons.Default.CloudUpload, null, Modifier.size(ButtonDefaults.IconSize))
+                            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                            Text(if (gistId != null) "Sync to Gist" else "Upload to Gist")
                         }
-                        val gistId = s.gistId
                         if (gistId != null) {
                             OutlinedButton(onClick = { onOpenGist(gistId) }) {
-                                Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(18.dp))
-                                Text("  Open Gist")
+                                Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(ButtonDefaults.IconSize))
+                                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                                Text("Open Gist")
                             }
                         }
-                    }
-                }
+                    },
+                )
             }
             items(files, key = { FILE_KEY + it.name }) { file ->
                 ReorderableItem(reorderState, key = FILE_KEY + file.name) { isDragging ->

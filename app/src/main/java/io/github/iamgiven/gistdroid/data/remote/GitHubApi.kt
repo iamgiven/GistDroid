@@ -144,6 +144,15 @@ class GitHubApi(private val tokenProvider: suspend () -> String?) {
         execute("DELETE", "$BASE/gists/$id").ensureOk()
     }
 
+    /** true = exists, false = deleted (404), null = unknown (offline, rate limited, …). */
+    suspend fun gistExists(id: String): Boolean? = runCatching {
+        when (execute("GET", "$BASE/gists/$id").code) {
+            in 200..299 -> true
+            404 -> false
+            else -> null
+        }
+    }.getOrNull()
+
     suspend fun isStarred(id: String): Boolean = execute("GET", "$BASE/gists/$id/star").code == 204
 
     suspend fun setStarred(id: String, starred: Boolean) {

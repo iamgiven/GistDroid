@@ -59,7 +59,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.iamgiven.gistdroid.data.applyOrder
 import io.github.iamgiven.gistdroid.data.remote.Gist
+import io.github.iamgiven.gistdroid.ui.components.DetailHeaderCard
 import io.github.iamgiven.gistdroid.ui.components.DragHandleIcon
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import io.github.iamgiven.gistdroid.ui.components.fileCount
 import io.github.iamgiven.gistdroid.ui.components.moved
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -221,28 +227,27 @@ private fun GistContent(
         modifier = Modifier.fillMaxSize(),
     ) {
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (!gist.description.isNullOrBlank()) {
-                    Text(gist.description, style = MaterialTheme.typography.bodyLarge)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    MetaChip(
-                        if (gist.public) Icons.Outlined.Public else Icons.Outlined.Lock,
-                        if (gist.public) "Public" else "Secret",
-                    )
+            DetailHeaderCard(
+                badges = buildList {
+                    add((if (gist.public) "Public" else "Secret") to gist.public)
+                    if (localId != null) add("Saved locally" to false)
+                },
+                description = gist.description,
+                meta = {
                     MetaChip(Icons.Outlined.Description, fileCount(gist.files.size))
-                    MetaChip(Icons.Outlined.Schedule, relativeTime(parseIso(gist.updatedAt)))
-                }
-                if (localId != null) {
-                    TextButton(
-                        onClick = { onOpenLocal(localId) },
-                        contentPadding = PaddingValues(horizontal = 0.dp),
-                    ) {
-                        Icon(Icons.Outlined.PhoneAndroid, null, Modifier.size(16.dp))
-                        Text("  Local copy available — open")
+                    MetaChip(Icons.Outlined.Schedule, "Updated ${relativeTime(parseIso(gist.updatedAt))}")
+                    gist.owner?.login?.let { MetaChip(Icons.Outlined.Person, it) }
+                },
+                actions = if (localId != null) {
+                    {
+                        OutlinedButton(onClick = { onOpenLocal(localId) }) {
+                            Icon(Icons.Outlined.PhoneAndroid, null, Modifier.size(ButtonDefaults.IconSize))
+                            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                            Text("Open local copy")
+                        }
                     }
-                }
-            }
+                } else null,
+            )
         }
         items(names, key = { FILE_KEY + it }) { name ->
             val file = gist.files[name] ?: return@items

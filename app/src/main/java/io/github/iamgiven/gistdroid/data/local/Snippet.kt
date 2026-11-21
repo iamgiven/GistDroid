@@ -65,6 +65,13 @@ interface SnippetDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(snippet: Snippet): Long
 
+    /** Detaches local snippets from a gist that no longer exists. */
+    @Query("UPDATE snippets SET gistId = NULL WHERE gistId = :gistId")
+    suspend fun unlinkGist(gistId: String)
+
+    @Query("SELECT DISTINCT gistId FROM snippets WHERE gistId IS NOT NULL")
+    suspend fun linkedGistIds(): List<String>
+
     @Query("DELETE FROM snippets WHERE id = :id")
     suspend fun delete(id: Long)
 }

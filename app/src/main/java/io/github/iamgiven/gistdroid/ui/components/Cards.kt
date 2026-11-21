@@ -9,6 +9,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -235,6 +238,47 @@ fun SkeletonCard() {
                 Box(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
                     SkeletonLines(listOf(0.8f, 0.55f, 0.68f))
                 }
+            }
+        }
+    }
+}
+
+/** Summary card at the top of a detail screen: status badges, description, metadata and actions. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun DetailHeaderCard(
+    badges: List<Pair<String, Boolean>>,
+    description: String?,
+    meta: @Composable FlowRowScope.() -> Unit,
+    actions: (@Composable RowScope.() -> Unit)? = null,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = CardShape,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        border = cardBorder(),
+    ) {
+        Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) { badges.forEach { (text, active) -> StatusBadge(text, active) } }
+            if (!description.isNullOrBlank()) {
+                Spacer(Modifier.height(12.dp))
+                Text(description, style = MaterialTheme.typography.bodyLarge)
+            }
+            HorizontalDivider(
+                Modifier.padding(vertical = 14.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                content = meta,
+            )
+            if (actions != null) {
+                Spacer(Modifier.height(16.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), content = actions)
             }
         }
     }

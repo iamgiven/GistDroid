@@ -6,6 +6,7 @@ import io.github.iamgiven.gistdroid.AppContainer
 import io.github.iamgiven.gistdroid.data.applyOrder
 import io.github.iamgiven.gistdroid.data.local.Snippet
 import io.github.iamgiven.gistdroid.data.local.SnippetFile
+import io.github.iamgiven.gistdroid.data.remote.ApiException
 import io.github.iamgiven.gistdroid.data.remote.Gist
 import io.github.iamgiven.gistdroid.data.remote.GitHubApi
 import io.github.iamgiven.gistdroid.data.remote.friendlyMessage
@@ -93,7 +94,10 @@ class GistListViewModel(private val c: AppContainer) : ViewModel() {
         }
     }
 
-    fun refresh() = load(reset = true, pullToRefresh = true)
+    fun refresh() {
+        load(reset = true, pullToRefresh = true)
+        viewModelScope.launch { c.verifyGistLinks(force = true) }
+    }
     fun retry() = load(reset = true)
 
     fun setFilter(filter: GistFilter) {
@@ -186,6 +190,7 @@ class GistDetailViewModel(private val c: AppContainer, private val id: String) :
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                if (e is ApiException && e.code == 404) c.snippetDao.unlinkGist(id)
                 _state.update { it.copy(loading = false, error = e.friendlyMessage()) }
             }
         }
@@ -200,6 +205,7 @@ class GistDetailViewModel(private val c: AppContainer, private val id: String) :
     fun delete() = runBusy {
         c.api.deleteGist(id)
         c.fileOrder.remove(id)
+        c.snippetDao.unlinkGist(id)
         _state.update { it.copy(deleted = true) }
         c.notifyGistChanged()
     }
