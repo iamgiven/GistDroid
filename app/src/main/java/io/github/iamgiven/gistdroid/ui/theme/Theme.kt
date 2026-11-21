@@ -9,7 +9,9 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -72,6 +74,11 @@ private val DarkColors = darkColorScheme(
     surfaceContainerHighest = Color(0xFF2F3636),
 )
 
+/** Colors for the main FAB: always the dark scheme's deep blue container, in both themes. */
+data class FabColors(val container: Color, val content: Color)
+
+val LocalFabColors = staticCompositionLocalOf { FabColors(DarkColors.primaryContainer, DarkColors.onPrimaryContainer) }
+
 @Composable
 fun GistDroidTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
@@ -102,5 +109,12 @@ fun GistDroidTheme(
         }
     }
 
-    MaterialTheme(colorScheme = colors, content = content)
+    val darkScheme = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        dynamicDarkColorScheme(context)
+    } else DarkColors
+    val fab = FabColors(darkScheme.primaryContainer, darkScheme.onPrimaryContainer)
+
+    CompositionLocalProvider(LocalFabColors provides fab) {
+        MaterialTheme(colorScheme = colors, content = content)
+    }
 }

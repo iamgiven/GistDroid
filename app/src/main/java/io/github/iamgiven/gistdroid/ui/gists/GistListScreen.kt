@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.iamgiven.gistdroid.data.remote.Gist
 import io.github.iamgiven.gistdroid.ui.appViewModel
+import io.github.iamgiven.gistdroid.ui.theme.LocalFabColors
 import io.github.iamgiven.gistdroid.ui.components.EmptyState
 import io.github.iamgiven.gistdroid.ui.components.ListHeader
 import io.github.iamgiven.gistdroid.ui.components.CARD_GAP
@@ -129,6 +130,8 @@ fun GistListScreen(
         floatingActionButton = {
             if (state.loggedIn == true) {
                 ExtendedFloatingActionButton(
+                    containerColor = LocalFabColors.current.container,
+                    contentColor = LocalFabColors.current.content,
                     onClick = onCreate,
                     icon = { Icon(Icons.Default.Add, null) },
                     text = { Text("New gist") },

@@ -255,14 +255,8 @@ fun AppNavigationBar(items: List<NavItem>, selectedRoute: String?, onSelect: (Na
         ) {
             items.forEach { item ->
                 val selected = item.route == selectedRoute
-                val bg by animateColorAsState(
-                    if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
-                    label = "navIndicator",
-                )
-                val fg by animateColorAsState(
-                    if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    label = "navContent",
-                )
+                val bg = if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
+                val fg = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 Column(
                     Modifier
                         .weight(1f)

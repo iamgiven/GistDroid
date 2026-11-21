@@ -1,6 +1,7 @@
 package io.github.iamgiven.gistdroid.ui.components
 
 import android.content.Context
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.RepeatMode
@@ -238,7 +239,7 @@ fun FileCard(
     val lineCount = remember(content) { content.count { it == '\n' } + 1 }
     val long = lineCount > TRUNCATE_THRESHOLD
     var showAll by rememberSaveable(filename) { mutableStateOf(false) }
-    val chevronRotation by animateFloatAsState(if (collapsed) -90f else 0f, label = "chevron")
+    val chevronRotation = if (collapsed) -90f else 0f
 
     val elevation by animateDpAsState(if (dragging) 8.dp else 0.dp, label = "dragElevation")
     val shape = RoundedCornerShape(24.dp)
@@ -254,7 +255,10 @@ fun FileCard(
         Row(
             Modifier
                 .fillMaxWidth()
-                .clickable { collapsed = !collapsed }
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) { collapsed = !collapsed }
                 .padding(start = if (dragHandle != null) 0.dp else 8.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -295,7 +299,7 @@ fun FileCard(
                 Icon(Icons.Default.ContentCopy, "Copy", Modifier.size(20.dp))
             }
         }
-        AnimatedVisibility(visible = !collapsed, enter = expandVertically(), exit = shrinkVertically()) {
+        if (!collapsed) {
             Column {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
                 CodeView(

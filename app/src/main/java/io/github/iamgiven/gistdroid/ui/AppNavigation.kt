@@ -1,8 +1,7 @@
 package io.github.iamgiven.gistdroid.ui
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
@@ -85,7 +84,7 @@ fun GistDroidNavHost() {
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         bottomBar = {
-            AnimatedVisibility(showBar, enter = expandVertically(), exit = shrinkVertically()) {
+            if (showBar) {
                 AppNavigationBar(topLevels, currentRoute) { item ->
                     if (item.route != currentRoute) nav.navigateTopLevel(item.route)
                 }
@@ -96,6 +95,10 @@ fun GistDroidNavHost() {
             navController = nav,
             startDestination = Routes.GISTS,
             modifier = Modifier.padding(padding).consumeWindowInsets(padding),
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None },
         ) {
             composable(Routes.GISTS) {
                 GistListScreen(
