@@ -1,6 +1,12 @@
 package io.github.iamgiven.gistdroid.ui.local
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material.icons.outlined.FileOpen
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.platform.LocalContext
+import io.github.iamgiven.gistdroid.ui.components.toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -66,10 +72,30 @@ fun LocalListScreen(onOpen: (Long) -> Unit, onCreate: () -> Unit) {
     val snippets by vm.snippets.collectAsStateWithLifecycle()
     val query by vm.query.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val context = LocalContext.current
+    val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isNotEmpty()) {
+            vm.importFiles(
+                uris,
+                onDone = { id ->
+                    context.toast("Imported ${uris.size} ${if (uris.size == 1) "file" else "files"}")
+                    onOpen(id)
+                },
+                onError = { context.toast(it) },
+            )
+        }
+    }
 
     Scaffold(
         topBar = {
-            ListHeader("Local Snippets") {
+            ListHeader(
+                "Local Snippets",
+                action = {
+                    IconButton(onClick = { pickFiles.launch(arrayOf("*/*")) }) {
+                        Icon(Icons.Outlined.FileOpen, "Import files")
+                    }
+                },
+            ) {
                 SearchField(query, { vm.query.value = it }, "Search snippets…")
             }
         },

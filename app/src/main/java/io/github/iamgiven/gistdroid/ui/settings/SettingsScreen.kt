@@ -297,6 +297,9 @@ fun SettingsScreen() {
                 }
             }
 
+            item { SectionLabel("Backup") }
+            item { BackupSection(loggedIn = login != null) }
+
             item { SectionLabel("About") }
             item {
                 Card(

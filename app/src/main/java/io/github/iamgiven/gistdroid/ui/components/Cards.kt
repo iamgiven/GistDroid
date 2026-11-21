@@ -87,7 +87,11 @@ fun AppLogo(modifier: Modifier = Modifier.size(30.dp)) {
  * The gap below the controls belongs to the header, so scrolled content never touches them.
  */
 @Composable
-fun ListHeader(title: String, content: (@Composable ColumnScope.() -> Unit)? = null) {
+fun ListHeader(
+    title: String,
+    action: (@Composable () -> Unit)? = null,
+    content: (@Composable ColumnScope.() -> Unit)? = null,
+) {
     Surface(color = MaterialTheme.colorScheme.background) {
         Column(
             Modifier
@@ -100,7 +104,13 @@ fun ListHeader(title: String, content: (@Composable ColumnScope.() -> Unit)? = n
             ) {
                 AppLogo(Modifier.size(30.dp))
                 Spacer(Modifier.width(14.dp))
-                Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                Text(
+                    title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                action?.invoke()
             }
             if (content != null) {
                 Column(Modifier.padding(horizontal = 16.dp), content = content)

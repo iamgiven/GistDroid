@@ -3,6 +3,7 @@ package io.github.iamgiven.gistdroid
 import android.app.Application
 import android.content.Context
 import androidx.room.Room
+import io.github.iamgiven.gistdroid.data.BackupManager
 import io.github.iamgiven.gistdroid.data.FileOrderStore
 import io.github.iamgiven.gistdroid.data.PreviewRepository
 import io.github.iamgiven.gistdroid.data.SettingsStore
@@ -59,6 +60,7 @@ class AppContainer(context: Context) {
     val snippetDao = db.snippetDao()
     val api = GitHubApi { settings.token.first() }
     val previews = PreviewRepository(context, api)
+    val backup = BackupManager(context, this)
 
     /** Incremented whenever a gist changes on the server so other screens reload. */
     val gistChanges = MutableStateFlow(0)

@@ -50,6 +50,9 @@ interface SnippetDao {
     @Query("SELECT * FROM snippets ORDER BY updatedAt DESC")
     fun observeAll(): Flow<List<Snippet>>
 
+    @Query("SELECT * FROM snippets ORDER BY updatedAt DESC")
+    suspend fun getAll(): List<Snippet>
+
     @Query("SELECT * FROM snippets WHERE id = :id")
     fun observe(id: Long): Flow<Snippet?>
 

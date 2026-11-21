@@ -1,5 +1,6 @@
 package io.github.iamgiven.gistdroid.ui.local
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.iamgiven.gistdroid.AppContainer
@@ -17,11 +18,20 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class LocalListViewModel(c: AppContainer) : ViewModel() {
+class LocalListViewModel(private val c: AppContainer) : ViewModel() {
     val query = MutableStateFlow("")
 
     init {
         viewModelScope.launch { c.verifyGistLinks() }
+    }
+
+    /** Creates a snippet from files picked on the device; reports the new id or an error message. */
+    fun importFiles(uris: List<Uri>, onDone: (Long) -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            runCatching { c.backup.importFiles(uris) }
+                .onSuccess(onDone)
+                .onFailure { onError(it.message ?: "Couldn't import the files") }
+        }
     }
 
     /** null = still loading. */
