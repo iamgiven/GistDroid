@@ -49,28 +49,33 @@ class GistListViewModel(private val c: AppContainer) : ViewModel() {
     val orders: StateFlow<Map<String, List<String>>> =
         c.fileOrder.orders.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
-    /** Card previews keyed by "id@updatedAt"; a null value means the preview is unavailable. */
+    /** Card previews keyed by raw URL; a null value means the preview is unavailable. */
     private val _previews = MutableStateFlow<Map<String, FilePreview?>>(emptyMap())
     val previews: StateFlow<Map<String, FilePreview?>> = _previews.asStateFlow()
     private val previewsInFlight = HashSet<String>()
 
-    fun previewKey(gist: Gist) = "${gist.id}@${gist.updatedAt}"
+    /** Name and raw URL of the file shown in a gist's card (first file in the saved order). */
+    fun previewSource(gist: Gist): Pair<String, String>? {
+        val name = applyOrder(gist.files.keys, orders.value[gist.id]).firstOrNull() ?: return null
+        val url = gist.files[name]?.rawUrl ?: return null
+        return name to url
+    }
+
+    /** Memory-cached previews are returned immediately so they never show a loading state. */
+    fun cachedPreview(gist: Gist): FilePreview? {
+        val (name, url) = previewSource(gist) ?: return null
+        return c.previews.peek(url)?.let { FilePreview(name, it) }
+    }
 
     fun loadPreview(gist: Gist) {
-        val key = previewKey(gist)
-        if (key in _previews.value || !previewsInFlight.add(key)) return
+        val (name, url) = previewSource(gist) ?: return
+        if (url in _previews.value || !previewsInFlight.add(url)) return
         viewModelScope.launch {
-            val name = applyOrder(gist.files.keys, orders.value[gist.id]).firstOrNull()
-            val url = name?.let { gist.files[it]?.rawUrl }
-            val preview = if (name != null && url != null) {
-                runCatching { FilePreview(name, c.api.fetchPreview(url)) }.getOrNull()
-            } else null
-            previewsInFlight.remove(key)
-            _previews.update { it + (key to preview) }
+            val content = c.previews.get(url)
+            previewsInFlight.remove(url)
+            _previews.update { it + (url to content?.let { text -> FilePreview(name, text) }) }
         }
     }
-    private var page = 1
-    private var job: Job? = null
 
     init {
         viewModelScope.launch {
@@ -119,6 +124,7 @@ class GistListViewModel(private val c: AppContainer) : ViewModel() {
             try {
                 val items = c.api.listGists(target, _state.value.filter == GistFilter.STARRED)
                 page = target
+                items.forEach(::loadPreview) // prefetch, so previews are ready when scrolled into view
                 _state.update {
                     it.copy(
                         gists = if (reset) items else (it.gists + items).distinctBy { g -> g.id },

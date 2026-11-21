@@ -133,9 +133,9 @@ class GitHubApi(private val tokenProvider: suspend () -> String?) {
         )
     }
 
-    /** First ~2KB of a raw gist file, for card previews (raw host, no token, no API rate limit). */
+    /** First ~1KB of a raw gist file, for card previews (raw host, no token, no API rate limit). */
     suspend fun fetchPreview(rawUrl: String): String {
-        val result = execute("GET", rawUrl, requireAuth = false, range = "bytes=0-2047")
+        val result = execute("GET", rawUrl, requireAuth = false, range = "bytes=0-1023")
         if (result.code != 200 && result.code != 206) throw ApiException(result.code, null)
         return result.body
     }

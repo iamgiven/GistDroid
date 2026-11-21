@@ -44,6 +44,7 @@ import io.github.iamgiven.gistdroid.data.local.Snippet
 import io.github.iamgiven.gistdroid.ui.appViewModel
 import io.github.iamgiven.gistdroid.ui.components.EmptyState
 import io.github.iamgiven.gistdroid.ui.components.ListHeader
+import io.github.iamgiven.gistdroid.ui.components.CARD_GAP
 import io.github.iamgiven.gistdroid.ui.components.SnippetCard
 import io.github.iamgiven.gistdroid.ui.components.fileCount
 import io.github.iamgiven.gistdroid.ui.components.previewOf
@@ -95,7 +96,7 @@ fun LocalListScreen(onOpen: (Long) -> Unit, onCreate: () -> Unit) {
                 else -> LazyColumn(
                     state = listState,
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(CARD_GAP),
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     items(list, key = { it.id }) { snippet ->

@@ -1,6 +1,17 @@
 package io.github.iamgiven.gistdroid.ui.gists
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -54,6 +65,8 @@ import io.github.iamgiven.gistdroid.data.remote.Gist
 import io.github.iamgiven.gistdroid.ui.appViewModel
 import io.github.iamgiven.gistdroid.ui.components.EmptyState
 import io.github.iamgiven.gistdroid.ui.components.ListHeader
+import io.github.iamgiven.gistdroid.ui.components.CARD_GAP
+import io.github.iamgiven.gistdroid.ui.components.SkeletonCard
 import io.github.iamgiven.gistdroid.ui.components.SnippetCard
 import io.github.iamgiven.gistdroid.ui.components.fileCount
 import io.github.iamgiven.gistdroid.ui.components.previewOf
@@ -77,6 +90,20 @@ fun GistListScreen(
     val snackbar = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
 
+    // Filter chips hide while scrolling down and come back when scrolling up (or at the top).
+    var chipsVisible by rememberSaveable { mutableStateOf(true) }
+    val chipsScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y < -6f) chipsVisible = false
+                else if (available.y > 6f) chipsVisible = true
+                return Offset.Zero
+            }
+        }
+    }
+    LaunchedEffect(listState.canScrollBackward) { if (!listState.canScrollBackward) chipsVisible = true }
+    LaunchedEffect(state.filter) { chipsVisible = true }
+
     LaunchedEffect(state.error, state.gists.isEmpty()) {
         val err = state.error
         if (err != null && state.gists.isNotEmpty()) {
@@ -86,13 +113,20 @@ fun GistListScreen(
     }
 
     Scaffold(
+        modifier = Modifier.nestedScroll(chipsScroll),
         topBar = {
             ListHeader("Gists") {
                 if (state.loggedIn == true) {
                     SearchField(state.query, vm::setQuery, "Search gists…")
-                    Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterOption("My gists", state.filter == GistFilter.MINE) { vm.setFilter(GistFilter.MINE) }
-                        FilterOption("Starred", state.filter == GistFilter.STARRED) { vm.setFilter(GistFilter.STARRED) }
+                    AnimatedVisibility(
+                        visible = chipsVisible,
+                        enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                        exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+                    ) {
+                        Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterOption("My gists", state.filter == GistFilter.MINE) { vm.setFilter(GistFilter.MINE) }
+                            FilterOption("Starred", state.filter == GistFilter.STARRED) { vm.setFilter(GistFilter.STARRED) }
+                        }
                     }
                 }
             }
@@ -127,7 +161,12 @@ fun GistListScreen(
                     ) {
                         val items = state.visibleGists
                         when {
-                            state.loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
+                            state.loading -> LazyColumn(
+                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                                verticalArrangement = Arrangement.spacedBy(CARD_GAP),
+                                userScrollEnabled = false,
+                                modifier = Modifier.fillMaxSize(),
+                            ) { items(6) { SkeletonCard() } }
                             state.error != null && state.gists.isEmpty() -> EmptyState(
                                 icon = Icons.Outlined.ErrorOutline,
                                 title = "Couldn't load",
@@ -145,16 +184,17 @@ fun GistListScreen(
                             else -> LazyColumn(
                                 state = listState,
                                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(CARD_GAP),
                                 modifier = Modifier.fillMaxSize(),
                             ) {
                                 items(items, key = { it.id }) { gist ->
-                                    val key = vm.previewKey(gist)
-                                    LaunchedEffect(key) { vm.loadPreview(gist) }
+                                    val url = vm.previewSource(gist)?.second
+                                    LaunchedEffect(url) { vm.loadPreview(gist) }
+                                    val preview = url?.let { previews[it] ?: vm.cachedPreview(gist) }
                                     GistItem(
                                         gist,
-                                        preview = previews[key],
-                                        loadingPreview = key !in previews,
+                                        preview = preview,
+                                        loadingPreview = url != null && preview == null && url !in previews,
                                         showOwner = state.filter == GistFilter.STARRED,
                                         onClick = { onOpen(gist.id) },
                                         modifier = Modifier.animateItem(),

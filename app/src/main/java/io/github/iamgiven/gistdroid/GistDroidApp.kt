@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.room.Room
 import io.github.iamgiven.gistdroid.data.FileOrderStore
+import io.github.iamgiven.gistdroid.data.PreviewRepository
 import io.github.iamgiven.gistdroid.data.SettingsStore
 import io.github.iamgiven.gistdroid.data.local.AppDatabase
 import io.github.iamgiven.gistdroid.data.remote.GitHubApi
@@ -35,6 +36,7 @@ class AppContainer(context: Context) {
     private val db = Room.databaseBuilder(context, AppDatabase::class.java, "gistdroid.db").build()
     val snippetDao = db.snippetDao()
     val api = GitHubApi { settings.token.first() }
+    val previews = PreviewRepository(context, api)
 
     /** Incremented whenever a gist changes on the server so other screens reload. */
     val gistChanges = MutableStateFlow(0)

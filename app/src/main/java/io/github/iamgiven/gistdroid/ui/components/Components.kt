@@ -1,6 +1,14 @@
 package io.github.iamgiven.gistdroid.ui.components
 
 import android.content.Context
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.CardDefaults
@@ -358,21 +366,84 @@ fun SnippetCard(
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainerHighest,
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().animateContentSize(),
                 ) {
-                    Text(
-                        preview ?: AnnotatedString("\n\n"),
-                        style = MonoStyle,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3,
-                        minLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    )
+                    Crossfade(targetState = preview, label = "preview") { text ->
+                        Box(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                            if (text == null) {
+                                SkeletonLines(listOf(0.8f, 0.55f, 0.68f))
+                            } else {
+                                Text(
+                                    text,
+                                    style = MonoStyle,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 3,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    }
                 }
             }
             Spacer(Modifier.height(14.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp), content = meta)
+        }
+    }
+}
+
+/** Spacing between list cards. */
+val CARD_GAP = 12.dp
+
+/** Pulsing placeholder color shared by skeleton elements. */
+@Composable
+private fun skeletonColor(): Color {
+    val transition = rememberInfiniteTransition(label = "skeleton")
+    val alpha by transition.animateFloat(
+        initialValue = 0.06f,
+        targetValue = 0.16f,
+        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
+        label = "skeletonAlpha",
+    )
+    return MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
+}
+
+/** Placeholder bars, each exactly one [MonoStyle] line tall so the swap to real text doesn't jump. */
+@Composable
+fun SkeletonLines(widths: List<Float>, lineHeight: TextUnit = MonoStyle.lineHeight) {
+    val color = skeletonColor()
+    val height = with(LocalDensity.current) { lineHeight.toDp() }
+    Column(Modifier.fillMaxWidth()) {
+        widths.forEach { w ->
+            Box(Modifier.height(height).fillMaxWidth(w), contentAlignment = Alignment.CenterStart) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(height * 0.55f)
+                        .background(color, RoundedCornerShape(4.dp))
+                )
+            }
+        }
+    }
+}
+
+/** Placeholder shaped like [SnippetCard], shown while the list loads. */
+@Composable
+fun SkeletonCard() {
+    ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+        Column(Modifier.padding(16.dp)) {
+            SkeletonLines(listOf(0.5f), MaterialTheme.typography.titleMedium.lineHeight)
+            Spacer(Modifier.height(10.dp))
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Box(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    SkeletonLines(listOf(0.8f, 0.55f, 0.68f))
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            SkeletonLines(listOf(0.7f), MaterialTheme.typography.labelMedium.lineHeight)
         }
     }
 }
