@@ -66,7 +66,11 @@ import io.github.iamgiven.gistdroid.ui.appViewModel
 import io.github.iamgiven.gistdroid.ui.components.EmptyState
 import io.github.iamgiven.gistdroid.ui.components.ListHeader
 import io.github.iamgiven.gistdroid.ui.components.CARD_GAP
+import io.github.iamgiven.gistdroid.ui.components.Collapsible
 import io.github.iamgiven.gistdroid.ui.components.HEADER_GAP
+import io.github.iamgiven.gistdroid.ui.components.rememberCollapsibleState
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material.icons.outlined.Code
 import io.github.iamgiven.gistdroid.ui.components.SkeletonCard
 import io.github.iamgiven.gistdroid.ui.components.SnippetCard
@@ -92,19 +96,9 @@ fun GistListScreen(
     val snackbar = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
 
-    // Filter chips hide while scrolling down and come back when scrolling up (or at the top).
-    var chipsVisible by rememberSaveable { mutableStateOf(true) }
-    val chipsScroll = remember {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (available.y < -6f) chipsVisible = false
-                else if (available.y > 6f) chipsVisible = true
-                return Offset.Zero
-            }
-        }
-    }
-    LaunchedEffect(listState.canScrollBackward) { if (!listState.canScrollBackward) chipsVisible = true }
-    LaunchedEffect(state.filter) { chipsVisible = true }
+    // Filter chips slide away with the scroll (down) and back (up), like a browser address bar.
+    val chips = rememberCollapsibleState()
+    LaunchedEffect(state.filter) { chips.show() }
 
     LaunchedEffect(state.error, state.gists.isEmpty()) {
         val err = state.error
@@ -115,19 +109,18 @@ fun GistListScreen(
     }
 
     Scaffold(
-        modifier = Modifier.nestedScroll(chipsScroll),
+        modifier = Modifier.nestedScroll(chips.connection),
         topBar = {
             ListHeader("Gists") {
                 if (state.loggedIn == true) {
                     SearchField(state.query, vm::setQuery, "Search gists…")
-                    AnimatedVisibility(
-                        visible = chipsVisible,
-                        enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                        exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
-                    ) {
-                        Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FilterOption("My gists", state.filter == GistFilter.MINE) { vm.setFilter(GistFilter.MINE) }
-                            FilterOption("Starred", state.filter == GistFilter.STARRED) { vm.setFilter(GistFilter.STARRED) }
+                    Collapsible(chips) {
+                        // Drop the invisible 48dp touch padding so the visual gaps are exact.
+                        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+                            Row(Modifier.padding(top = HEADER_GAP), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterOption("My gists", state.filter == GistFilter.MINE) { vm.setFilter(GistFilter.MINE) }
+                                FilterOption("Starred", state.filter == GistFilter.STARRED) { vm.setFilter(GistFilter.STARRED) }
+                            }
                         }
                     }
                 }
@@ -164,7 +157,7 @@ fun GistListScreen(
                         val items = state.visibleGists
                         when {
                             state.loading -> LazyColumn(
-                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = HEADER_GAP, bottom = 96.dp),
+                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 96.dp),
                                 verticalArrangement = Arrangement.spacedBy(CARD_GAP),
                                 userScrollEnabled = false,
                                 modifier = Modifier.fillMaxSize(),
@@ -185,7 +178,7 @@ fun GistListScreen(
                             )
                             else -> LazyColumn(
                                 state = listState,
-                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = HEADER_GAP, bottom = 96.dp),
+                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 96.dp),
                                 verticalArrangement = Arrangement.spacedBy(CARD_GAP),
                                 modifier = Modifier.fillMaxSize(),
                             ) {
