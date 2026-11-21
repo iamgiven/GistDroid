@@ -92,7 +92,7 @@ fun GistListScreen(
                 ExtendedFloatingActionButton(
                     onClick = onCreate,
                     icon = { Icon(Icons.Default.Add, null) },
-                    text = { Text("Gist baru") },
+                    text = { Text("New gist") },
                     expanded = !listState.canScrollBackward,
                 )
             }
@@ -104,17 +104,17 @@ fun GistListScreen(
                 null -> Unit
                 false -> EmptyState(
                     icon = Icons.Outlined.CloudOff,
-                    title = "Belum terhubung",
-                    message = "Hubungkan akun GitHub dengan Personal Access Token untuk melihat dan menyimpan gist. Snippet lokal tetap bisa dipakai tanpa akun.",
+                    title = "Not connected",
+                    message = "Connect your GitHub account with a Personal Access Token to view and save gists. Local snippets work without an account.",
                 ) {
-                    Button(onClick = onGoToSettings) { Text("Hubungkan akun") }
+                    Button(onClick = onGoToSettings) { Text("Connect account") }
                 }
                 true -> {
                     Column(Modifier.padding(horizontal = 16.dp)) {
-                        SearchField(state.query, vm::setQuery, "Cari gist…")
+                        SearchField(state.query, vm::setQuery, "Search gists…")
                         Row(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FilterOption("Milik saya", state.filter == GistFilter.MINE) { vm.setFilter(GistFilter.MINE) }
-                            FilterOption("Berbintang", state.filter == GistFilter.STARRED) { vm.setFilter(GistFilter.STARRED) }
+                            FilterOption("Mine", state.filter == GistFilter.MINE) { vm.setFilter(GistFilter.MINE) }
+                            FilterOption("Starred", state.filter == GistFilter.STARRED) { vm.setFilter(GistFilter.STARRED) }
                         }
                     }
                     PullToRefreshBox(
@@ -127,16 +127,16 @@ fun GistListScreen(
                             state.loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
                             state.error != null && state.gists.isEmpty() -> EmptyState(
                                 icon = Icons.Outlined.ErrorOutline,
-                                title = "Gagal memuat",
+                                title = "Couldn't load",
                                 message = state.error.orEmpty(),
-                            ) { Button(onClick = vm::retry) { Text("Coba lagi") } }
+                            ) { Button(onClick = vm::retry) { Text("Retry") } }
                             items.isEmpty() -> EmptyState(
                                 icon = if (state.filter == GistFilter.STARRED) Icons.Outlined.StarOutline else Icons.Outlined.Description,
-                                title = if (state.query.isNotBlank()) "Tidak ditemukan" else "Belum ada gist",
+                                title = if (state.query.isNotBlank()) "No results" else "No gists yet",
                                 message = when {
-                                    state.query.isNotBlank() -> "Tidak ada gist yang cocok dengan \"${state.query}\""
-                                    state.filter == GistFilter.STARRED -> "Gist yang kamu beri bintang akan muncul di sini."
-                                    else -> "Buat gist pertamamu dengan tombol di bawah."
+                                    state.query.isNotBlank() -> "No gists match \"${state.query}\""
+                                    state.filter == GistFilter.STARRED -> "Gists you star will show up here."
+                                    else -> "Create your first gist with the button below."
                                 },
                             )
                             else -> LazyColumn(
@@ -202,7 +202,7 @@ private fun GistItem(gist: Gist, showOwner: Boolean, onClick: () -> Unit, modifi
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 MetaChip(
                     if (gist.public) Icons.Outlined.Public else Icons.Outlined.Lock,
-                    if (gist.public) "Publik" else "Rahasia",
+                    if (gist.public) "Public" else "Secret",
                 )
                 MetaChip(Icons.Outlined.Description, "${gist.files.size} file")
                 MetaChip(Icons.Outlined.Schedule, relativeTime(parseIso(gist.updatedAt)))

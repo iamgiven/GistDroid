@@ -11,6 +11,7 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:label="GistDroid"
         android:supportsRtl="true"
+        android:usesCleartextTraffic="false"
         android:theme="@style/Theme.GistDroid">
 
         <activity
@@ -22,7 +23,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <intent-filter android:label="Simpan ke GistDroid">
+            <intent-filter android:label="Save to GistDroid">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />

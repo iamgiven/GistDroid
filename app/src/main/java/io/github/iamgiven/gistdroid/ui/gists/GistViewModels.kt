@@ -150,7 +150,7 @@ class GistDetailViewModel(private val c: AppContainer, private val id: String) :
     fun toggleStar() = runBusy {
         val target = !_state.value.starred
         c.api.setStarred(id, target)
-        _state.update { it.copy(starred = target, message = if (target) "Diberi bintang" else "Bintang dihapus") }
+        _state.update { it.copy(starred = target, message = if (target) "Starred" else "Unstarred") }
     }
 
     fun delete() = runBusy {
@@ -175,7 +175,7 @@ class GistDetailViewModel(private val c: AppContainer, private val id: String) :
             )
         )
         _state.update {
-            it.copy(message = if (existing != null) "Salinan lokal diperbarui" else "Disimpan ke penyimpanan lokal")
+            it.copy(message = if (existing != null) "Local copy updated" else "Saved to local storage")
         }
     }
 

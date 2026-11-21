@@ -92,16 +92,16 @@ fun LocalDetailScreen(
                 TopAppBar(
                     title = { Text(s?.title ?: "", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     navigationIcon = {
-                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Kembali") }
+                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                     },
                     actions = {
                         if (s != null) {
                             IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "Edit") }
                             Box {
-                                IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, "Lainnya") }
+                                IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, "More") }
                                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                                     DropdownMenuItem(
-                                        text = { Text("Bagikan isi") },
+                                        text = { Text("Share content") },
                                         leadingIcon = { Icon(Icons.Default.Share, null) },
                                         onClick = {
                                             menuOpen = false
@@ -111,7 +111,7 @@ fun LocalDetailScreen(
                                         },
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Hapus", color = MaterialTheme.colorScheme.error) },
+                                        text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
                                         leadingIcon = {
                                             Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
                                         },
@@ -142,25 +142,25 @@ fun LocalDetailScreen(
                         Text(s.description, style = MaterialTheme.typography.bodyLarge)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        if (s.gistId != null) MetaChip(Icons.Outlined.CloudDone, "Tertaut ke Gist")
-                        else MetaChip(Icons.Outlined.PhoneAndroid, "Hanya lokal")
+                        if (s.gistId != null) MetaChip(Icons.Outlined.CloudDone, "Linked to Gist")
+                        else MetaChip(Icons.Outlined.PhoneAndroid, "Local only")
                         MetaChip(
                             if (s.isPublic) Icons.Outlined.Public else Icons.Outlined.Lock,
-                            if (s.isPublic) "Publik" else "Rahasia",
+                            if (s.isPublic) "Public" else "Secret",
                         )
                         MetaChip(Icons.Outlined.Description, "${s.files.size} file")
                     }
-                    MetaChip(Icons.Outlined.Schedule, "Diubah ${relativeTime(s.updatedAt)}")
+                    MetaChip(Icons.Outlined.Schedule, "Updated ${relativeTime(s.updatedAt)}")
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilledTonalButton(onClick = vm::upload, enabled = !state.busy) {
                             Icon(Icons.Default.CloudUpload, null, Modifier.size(18.dp))
-                            Text(if (s.gistId != null) "  Sinkronkan ke Gist" else "  Upload ke Gist")
+                            Text(if (s.gistId != null) "  Sync to Gist" else "  Upload to Gist")
                         }
                         val gistId = s.gistId
                         if (gistId != null) {
                             OutlinedButton(onClick = { onOpenGist(gistId) }) {
                                 Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(18.dp))
-                                Text("  Buka Gist")
+                                Text("  Open Gist")
                             }
                         }
                     }
@@ -176,10 +176,10 @@ fun LocalDetailScreen(
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             icon = { Icon(Icons.Default.Delete, null) },
-            title = { Text("Hapus snippet?") },
-            text = { Text("Snippet akan dihapus dari HP. Gist di GitHub (jika ada) tidak ikut terhapus.") },
-            confirmButton = { TextButton(onClick = { confirmDelete = false; vm.delete() }) { Text("Hapus") } },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Batal") } },
+            title = { Text("Delete snippet?") },
+            text = { Text("The snippet will be removed from this device. The linked GitHub gist (if any) will not be deleted.") },
+            confirmButton = { TextButton(onClick = { confirmDelete = false; vm.delete() }) { Text("Delete") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
         )
     }
 }

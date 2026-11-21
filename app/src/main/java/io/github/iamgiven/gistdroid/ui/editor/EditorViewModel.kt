@@ -25,7 +25,7 @@ data class EditorState(
     val files: List<EditableFile> = emptyList(),
     val saving: Boolean = false,
     val error: String? = null,
-    /** Diisi setelah berhasil simpan: id lokal / id gist. */
+    /** Set after a successful save: local id or gist id. */
     val savedId: String? = null,
     val loadFailed: Boolean = false,
 )
@@ -64,7 +64,7 @@ class EditorViewModel(
             try {
                 when (target) {
                     EditorTarget.LOCAL -> {
-                        val s = c.snippetDao.get(id.toLong()) ?: error("Snippet tidak ditemukan")
+                        val s = c.snippetDao.get(id.toLong()) ?: error("Snippet not found")
                         original = s
                         _state.update {
                             it.copy(
@@ -112,20 +112,20 @@ class EditorViewModel(
     }
     fun clearError() = _state.update { it.copy(error = null) }
 
-    /** Validasi & normalisasi nama file. Mengembalikan pesan error atau null. */
+    /** Validates & normalizes file names. Returns the files or an error message. */
     private fun prepareFiles(): Pair<List<Pair<String, String>>?, String?> {
         val files = _state.value.files
-        if (files.isEmpty()) return null to "Tambahkan minimal satu file"
+        if (files.isEmpty()) return null to "Add at least one file"
         val result = files.mapIndexed { i, f ->
             val name = f.name.trim().ifBlank { if (files.size == 1) "snippet.txt" else "file${i + 1}.txt" }
             name to f.content
         }
-        if (result.map { it.first }.toSet().size != result.size) return null to "Nama file tidak boleh sama"
-        if (result.any { it.first.contains('/') }) return null to "Nama file tidak boleh mengandung '/'"
+        if (result.map { it.first }.toSet().size != result.size) return null to "File names must be unique"
+        if (result.any { it.first.contains('/') }) return null to "File names can't contain '/'"
         if (target == EditorTarget.GIST && result.any { it.second.isBlank() }) {
-            return null to "Isi file tidak boleh kosong untuk Gist"
+            return null to "Gist files can't be empty"
         }
-        if (result.all { it.second.isBlank() }) return null to "Snippet masih kosong"
+        if (result.all { it.second.isBlank() }) return null to "Snippet is empty"
         return result to null
     }
 

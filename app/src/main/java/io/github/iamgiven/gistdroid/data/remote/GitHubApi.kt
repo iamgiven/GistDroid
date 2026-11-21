@@ -3,6 +3,7 @@ package io.github.iamgiven.gistdroid.data.remote
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -13,7 +14,8 @@ import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
 
 class ApiException(val code: Int, message: String?) : Exception(message)
-class NotLoggedInException : Exception("Belum terhubung ke GitHub")
+class NotLoggedInException : Exception("Not connected to GitHub")
+class MissingScopeException : Exception("This token is missing the \"gist\" scope")
 
 class GitHubApi(private val tokenProvider: suspend () -> String?) {
 
@@ -27,7 +29,7 @@ class GitHubApi(private val tokenProvider: suspend () -> String?) {
         encodeDefaults = true
     }
 
-    private class Result(val code: Int, val body: String)
+    private class Result(val code: Int, val body: String, val scopes: String?)
 
     private suspend fun execute(
         method: String,
@@ -36,8 +38,11 @@ class GitHubApi(private val tokenProvider: suspend () -> String?) {
         token: String? = null,
         requireAuth: Boolean = true,
     ): Result = withContext(Dispatchers.IO) {
-        val authToken = token ?: tokenProvider()
-        if (requireAuth && authToken == null) throw NotLoggedInException()
+        // The token is only ever sent to the GitHub API host over HTTPS, never to other hosts
+        // (e.g. raw file URLs). OkHttp also drops the Authorization header on cross-host redirects.
+        val sendAuth = url.toHttpUrl().let { it.isHttps && it.host == API_HOST }
+        val authToken = if (sendAuth) token ?: tokenProvider() else null
+        if (requireAuth && sendAuth && authToken == null) throw NotLoggedInException()
         val requestBody = when {
             body != null -> body.toRequestBody(JSON_TYPE)
             method == "PUT" || method == "POST" || method == "PATCH" -> ByteArray(0).toRequestBody(null)
@@ -52,7 +57,7 @@ class GitHubApi(private val tokenProvider: suspend () -> String?) {
             .apply { if (authToken != null) header("Authorization", "Bearer $authToken") }
             .build()
         client.newCall(request).execute().use { response ->
-            Result(response.code, response.body?.string().orEmpty())
+            Result(response.code, response.body?.string().orEmpty(), response.header("X-OAuth-Scopes"))
         }
     }
 
@@ -67,6 +72,17 @@ class GitHubApi(private val tokenProvider: suspend () -> String?) {
     suspend fun getUser(token: String? = null): GitHubUser =
         json.decodeFromString(execute("GET", "$BASE/user", token = token).ensureOk().body)
 
+    /**
+     * Verifies a token before it is saved. Classic tokens report their scopes in
+     * X-OAuth-Scopes and must include "gist"; fine-grained tokens don't send the header.
+     */
+    suspend fun verifyToken(token: String): GitHubUser {
+        val result = execute("GET", "$BASE/user", token = token).ensureOk()
+        val scopes = result.scopes?.split(',')?.map { it.trim() }
+        if (scopes != null && "gist" !in scopes) throw MissingScopeException()
+        return json.decodeFromString(result.body)
+    }
+
     suspend fun listGists(page: Int, starred: Boolean): List<Gist> {
         val path = if (starred) "gists/starred" else "gists"
         return json.decodeFromString(
@@ -74,7 +90,7 @@ class GitHubApi(private val tokenProvider: suspend () -> String?) {
         )
     }
 
-    /** Ambil gist lengkap. File yang terpotong (>1MB) diunduh dari raw_url. */
+    /** Fetches a full gist. Truncated files (>1MB) are downloaded from raw_url. */
     suspend fun getGist(id: String, fetchTruncated: Boolean = true): Gist {
         val gist = json.decodeFromString<Gist>(execute("GET", "$BASE/gists/$id").ensureOk().body)
         if (!fetchTruncated || gist.files.values.none { it.truncated && it.rawUrl != null }) return gist
@@ -126,22 +142,24 @@ class GitHubApi(private val tokenProvider: suspend () -> String?) {
     }
 
     companion object {
-        const val BASE = "https://api.github.com"
+        private const val API_HOST = "api.github.com"
+        const val BASE = "https://$API_HOST"
         const val PER_PAGE = 30
         private val JSON_TYPE = "application/json; charset=utf-8".toMediaType()
     }
 }
 
 fun Throwable.friendlyMessage(): String = when (this) {
-    is NotLoggedInException -> "Hubungkan akun GitHub dulu di Setelan"
+    is NotLoggedInException -> "Connect your GitHub account in Settings first"
+    is MissingScopeException -> message!!
     is ApiException -> when (code) {
-        401 -> "Token tidak valid atau sudah kedaluwarsa"
-        403 -> message ?: "Akses ditolak (mungkin kena rate limit)"
-        404 -> "Gist tidak ditemukan"
-        422 -> "Data tidak valid: ${message ?: "periksa nama file & isi"}"
-        else -> message ?: "Error dari GitHub ($code)"
+        401 -> "Token is invalid or expired"
+        403 -> message ?: "Access denied (possibly rate limited)"
+        404 -> "Gist not found"
+        422 -> "Invalid data: ${message ?: "check file names & content"}"
+        else -> message ?: "GitHub error ($code)"
     }
     is UnknownHostException, is ConnectException, is SocketTimeoutException ->
-        "Tidak bisa terhubung ke GitHub. Periksa koneksi internet."
-    else -> message ?: "Terjadi kesalahan"
+        "Can't reach GitHub. Check your internet connection."
+    else -> message ?: "Something went wrong"
 }

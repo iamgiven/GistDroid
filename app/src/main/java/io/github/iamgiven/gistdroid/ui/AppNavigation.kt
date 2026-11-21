@@ -58,8 +58,8 @@ private data class TopLevel(val route: String, val label: String, val icon: Imag
 
 private val topLevels = listOf(
     TopLevel(Routes.GISTS, "Gist", Icons.Outlined.Cloud, Icons.Filled.Cloud),
-    TopLevel(Routes.LOCAL, "Lokal", Icons.Outlined.Inventory2, Icons.Filled.Inventory2),
-    TopLevel(Routes.SETTINGS, "Setelan", Icons.Outlined.Settings, Icons.Filled.Settings),
+    TopLevel(Routes.LOCAL, "Local", Icons.Outlined.Inventory2, Icons.Filled.Inventory2),
+    TopLevel(Routes.SETTINGS, "Settings", Icons.Outlined.Settings, Icons.Filled.Settings),
 )
 
 private fun NavHostController.navigateTopLevel(route: String) = navigate(route) {
@@ -75,7 +75,7 @@ fun GistDroidNavHost() {
     val currentRoute = backStack?.destination?.route
     val showBar = currentRoute == null || topLevels.any { it.route == currentRoute }
 
-    // Teks yang dibagikan dari aplikasi lain → buka editor snippet lokal.
+    // Text shared from other apps → open the local snippet editor.
     val container = appContainer()
     val pendingShare by container.pendingShare.collectAsStateWithLifecycle()
     LaunchedEffect(pendingShare) {

@@ -102,14 +102,14 @@ fun GistDetailScreen(
                 TopAppBar(
                     title = { Text(gist?.title ?: "Gist", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     navigationIcon = {
-                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Kembali") }
+                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                     },
                     actions = {
                         if (gist != null) {
                             IconButton(onClick = vm::toggleStar, enabled = !state.busy) {
                                 Icon(
                                     if (state.starred) Icons.Filled.Star else Icons.Filled.StarBorder,
-                                    "Bintang",
+                                    "Star",
                                     tint = if (state.starred) MaterialTheme.colorScheme.primary
                                     else MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -118,26 +118,26 @@ fun GistDetailScreen(
                                 IconButton(onClick = onEdit, enabled = !state.busy) { Icon(Icons.Default.Edit, "Edit") }
                             }
                             Box {
-                                IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, "Lainnya") }
+                                IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, "More") }
                                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                                     DropdownMenuItem(
-                                        text = { Text(if (localId != null) "Perbarui salinan lokal" else "Simpan ke lokal") },
+                                        text = { Text(if (localId != null) "Update local copy" else "Save locally") },
                                         leadingIcon = { Icon(Icons.Default.Download, null) },
                                         onClick = { menuOpen = false; vm.saveLocal() },
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Buka di browser") },
+                                        text = { Text("Open in browser") },
                                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, null) },
                                         onClick = { menuOpen = false; uriHandler.openUri(gist.htmlUrl) },
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Bagikan tautan") },
+                                        text = { Text("Share link") },
                                         leadingIcon = { Icon(Icons.Default.Share, null) },
                                         onClick = { menuOpen = false; context.shareText(gist.htmlUrl, gist.title) },
                                     )
                                     if (isOwner) {
                                         DropdownMenuItem(
-                                            text = { Text("Hapus", color = MaterialTheme.colorScheme.error) },
+                                            text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
                                             leadingIcon = {
                                                 Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
                                             },
@@ -163,9 +163,9 @@ fun GistDetailScreen(
                 }
                 gist == null -> EmptyState(
                     icon = Icons.Outlined.ErrorOutline,
-                    title = "Gagal memuat gist",
+                    title = "Couldn't load gist",
                     message = state.error.orEmpty(),
-                ) { Button(onClick = vm::load) { Text("Coba lagi") } }
+                ) { Button(onClick = vm::load) { Text("Retry") } }
                 else -> GistContent(gist, localId, onOpenLocal)
             }
         }
@@ -175,12 +175,12 @@ fun GistDetailScreen(
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             icon = { Icon(Icons.Default.Delete, null) },
-            title = { Text("Hapus gist?") },
-            text = { Text("Gist akan dihapus permanen dari GitHub. Salinan lokal (jika ada) tidak ikut terhapus.") },
+            title = { Text("Delete gist?") },
+            text = { Text("The gist will be permanently deleted from GitHub. Your local copy (if any) will be kept.") },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = false; vm.delete() }) { Text("Hapus") }
+                TextButton(onClick = { confirmDelete = false; vm.delete() }) { Text("Delete") }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Batal") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
         )
     }
 }
@@ -200,7 +200,7 @@ private fun GistContent(gist: Gist, localId: Long?, onOpenLocal: (Long) -> Unit)
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     MetaChip(
                         if (gist.public) Icons.Outlined.Public else Icons.Outlined.Lock,
-                        if (gist.public) "Publik" else "Rahasia",
+                        if (gist.public) "Public" else "Secret",
                     )
                     MetaChip(Icons.Outlined.Description, "${gist.files.size} file")
                     MetaChip(Icons.Outlined.Schedule, relativeTime(parseIso(gist.updatedAt)))
@@ -211,7 +211,7 @@ private fun GistContent(gist: Gist, localId: Long?, onOpenLocal: (Long) -> Unit)
                         contentPadding = PaddingValues(horizontal = 0.dp),
                     ) {
                         Icon(Icons.Outlined.PhoneAndroid, null, Modifier.size(16.dp))
-                        Text("  Ada salinan lokal — buka")
+                        Text("  Local copy available — open")
                     }
                 }
             }

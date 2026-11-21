@@ -61,7 +61,7 @@ fun LocalListScreen(onOpen: (Long) -> Unit, onCreate: () -> Unit) {
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text("Snippet Lokal", fontWeight = FontWeight.SemiBold) },
+                title = { Text("Local Snippets", fontWeight = FontWeight.SemiBold) },
                 scrollBehavior = scrollBehavior,
             )
         },
@@ -69,14 +69,14 @@ fun LocalListScreen(onOpen: (Long) -> Unit, onCreate: () -> Unit) {
             ExtendedFloatingActionButton(
                 onClick = onCreate,
                 icon = { Icon(Icons.Default.Add, null) },
-                text = { Text("Snippet baru") },
+                text = { Text("New snippet") },
                 expanded = !listState.canScrollBackward,
             )
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             SearchField(
-                query, { vm.query.value = it }, "Cari judul, nama file, atau isi…",
+                query, { vm.query.value = it }, "Search title, file name, or content…",
                 Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
             )
             val list = snippets
@@ -84,13 +84,13 @@ fun LocalListScreen(onOpen: (Long) -> Unit, onCreate: () -> Unit) {
                 list == null -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
                 list.isEmpty() && query.isNotBlank() -> EmptyState(
                     icon = Icons.Outlined.SearchOff,
-                    title = "Tidak ditemukan",
-                    message = "Tidak ada snippet yang cocok dengan \"$query\"",
+                    title = "No results",
+                    message = "No snippets match \"$query\"",
                 )
                 list.isEmpty() -> EmptyState(
                     icon = Icons.Outlined.Inventory2,
-                    title = "Belum ada snippet",
-                    message = "Snippet lokal tersimpan di HP dan bisa diunggah ke Gist kapan saja. Kamu juga bisa membagikan teks dari aplikasi lain ke GistDroid.",
+                    title = "No snippets yet",
+                    message = "Local snippets live on this device and can be uploaded to Gist anytime. You can also share text from other apps to GistDroid.",
                 )
                 else -> LazyColumn(
                     state = listState,
@@ -135,8 +135,8 @@ private fun SnippetItem(snippet: Snippet, onClick: () -> Unit, modifier: Modifie
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                if (snippet.gistId != null) MetaChip(Icons.Outlined.CloudDone, "Di Gist")
-                else MetaChip(Icons.Outlined.PhoneAndroid, "Lokal")
+                if (snippet.gistId != null) MetaChip(Icons.Outlined.CloudDone, "On Gist")
+                else MetaChip(Icons.Outlined.PhoneAndroid, "Local")
                 MetaChip(Icons.Outlined.Description, "${snippet.files.size} file")
                 MetaChip(Icons.Outlined.Schedule, relativeTime(snippet.updatedAt))
             }

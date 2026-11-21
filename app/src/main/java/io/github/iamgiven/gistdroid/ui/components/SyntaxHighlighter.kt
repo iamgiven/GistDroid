@@ -19,7 +19,7 @@ data class CodeColors(
     val annotation: Color,
 )
 
-/** Highlighter ringan berbasis regex; cukup untuk sebagian besar bahasa populer. */
+/** Lightweight regex-based highlighter; good enough for most popular languages. */
 object SyntaxHighlighter {
 
     private enum class Family { SLASH, HASH, DASH, MARKUP, JSON, PLAIN }
@@ -80,7 +80,7 @@ object SyntaxHighlighter {
             Family.MARKUP -> "<!--[\\s\\S]*?-->"
             else -> "(?!x)x"
         }
-        // Grup: 1=komentar 2=string 3=anotasi/tag 4=angka 5=kata
+        // Groups: 1=comment 2=string 3=annotation/tag 4=number 5=word
         val third = if (family == Family.MARKUP) "</?[A-Za-z][\\w:.-]*|/?>" else ANNOTATION
         Regex("($comment)|($STRINGS)|($third)|($NUMBER)|($WORD)")
     }

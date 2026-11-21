@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 class LocalListViewModel(c: AppContainer) : ViewModel() {
     val query = MutableStateFlow("")
 
-    /** null = masih memuat. */
+    /** null = still loading. */
     val snippets: StateFlow<List<Snippet>?> = combine(c.snippetDao.observeAll(), query) { list, q ->
         if (q.isBlank()) list else list.filter { s ->
             s.description.contains(q, true) ||
@@ -35,7 +35,7 @@ data class LocalDetailState(
 )
 
 class LocalDetailViewModel(private val c: AppContainer, private val id: Long) : ViewModel() {
-    /** null di awal; Missing jika sudah dihapus. */
+    /** null while loading or after deletion. */
     val snippet: StateFlow<Snippet?> = c.snippetDao.observe(id)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
@@ -57,7 +57,7 @@ class LocalDetailViewModel(private val c: AppContainer, private val id: Long) : 
                 val s = c.snippetDao.get(id) ?: return@launch
                 val files = s.files.filter { it.content.isNotBlank() }.map { it.name to it.content }
                 if (files.isEmpty()) {
-                    _state.update { it.copy(message = "Tidak ada file berisi untuk diunggah") }
+                    _state.update { it.copy(message = "No non-empty files to upload") }
                     return@launch
                 }
                 val existingId = s.gistId
@@ -74,7 +74,7 @@ class LocalDetailViewModel(private val c: AppContainer, private val id: Long) : 
                 c.snippetDao.upsert(s.copy(gistId = gist.id))
                 c.notifyGistChanged()
                 _state.update {
-                    it.copy(message = if (existingId == gist.id) "Gist diperbarui" else "Berhasil diunggah ke Gist")
+                    it.copy(message = if (existingId == gist.id) "Gist updated" else "Uploaded to Gist")
                 }
             } catch (e: CancellationException) {
                 throw e

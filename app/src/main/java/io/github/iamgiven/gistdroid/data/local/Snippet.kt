@@ -30,7 +30,7 @@ data class Snippet(
     val updatedAt: Long,
 ) {
     val title: String
-        get() = description.takeIf { it.isNotBlank() } ?: files.firstOrNull()?.name ?: "Tanpa judul"
+        get() = description.takeIf { it.isNotBlank() } ?: files.firstOrNull()?.name ?: "Untitled"
 }
 
 private val filesJson: Json = Json { ignoreUnknownKeys = true }

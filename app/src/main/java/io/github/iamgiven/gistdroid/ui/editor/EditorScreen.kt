@@ -97,9 +97,9 @@ fun EditorScreen(
     }
 
     val title = when {
-        target == EditorTarget.GIST && vm.isNew -> "Gist baru"
+        target == EditorTarget.GIST && vm.isNew -> "New gist"
         target == EditorTarget.GIST -> "Edit gist"
-        vm.isNew -> "Snippet baru"
+        vm.isNew -> "New snippet"
         else -> "Edit snippet"
     }
 
@@ -108,7 +108,7 @@ fun EditorScreen(
             TopAppBar(
                 title = { Text(title) },
                 navigationIcon = {
-                    IconButton(onClick = requestClose, enabled = !state.saving) { Icon(Icons.Default.Close, "Tutup") }
+                    IconButton(onClick = requestClose, enabled = !state.saving) { Icon(Icons.Default.Close, "Close") }
                 },
                 actions = {
                     if (state.saving) {
@@ -117,7 +117,7 @@ fun EditorScreen(
                         Button(onClick = vm::save, modifier = Modifier.padding(end = 8.dp)) {
                             Icon(Icons.Default.Check, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text(if (target == EditorTarget.GIST) "Simpan ke Gist" else "Simpan")
+                            Text(if (target == EditorTarget.GIST) "Save to Gist" else "Save")
                         }
                     }
                 },
@@ -130,9 +130,9 @@ fun EditorScreen(
                 state.loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
                 state.loadFailed -> EmptyState(
                     icon = Icons.Outlined.ErrorOutline,
-                    title = "Gagal membuka",
+                    title = "Couldn't open",
                     message = state.error.orEmpty(),
-                ) { Button(onClick = onClose) { Text("Kembali") } }
+                ) { Button(onClick = onClose) { Text("Back") } }
                 else -> LazyColumn(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -142,7 +142,7 @@ fun EditorScreen(
                         OutlinedTextField(
                             value = state.description,
                             onValueChange = vm::setDescription,
-                            label = { Text("Deskripsi") },
+                            label = { Text("Description") },
                             modifier = Modifier.fillMaxWidth(),
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                             shape = RoundedCornerShape(16.dp),
@@ -152,13 +152,13 @@ fun EditorScreen(
                         val canChange = !(target == EditorTarget.GIST && !vm.isNew)
                         OutlinedCard(shape = RoundedCornerShape(16.dp)) {
                             ListItem(
-                                headlineContent = { Text(if (state.isPublic) "Gist publik" else "Gist rahasia") },
+                                headlineContent = { Text(if (state.isPublic) "Public gist" else "Secret gist") },
                                 supportingContent = {
                                     Text(
                                         when {
-                                            !canChange -> "Visibilitas gist tidak bisa diubah setelah dibuat"
-                                            state.isPublic -> "Bisa ditemukan siapa saja"
-                                            else -> "Hanya bisa dilihat lewat tautan"
+                                            !canChange -> "Visibility can't be changed after a gist is created"
+                                            state.isPublic -> "Discoverable by anyone"
+                                            else -> "Only visible to people with the link"
                                         }
                                     )
                                 },
@@ -179,8 +179,8 @@ fun EditorScreen(
                                     OutlinedTextField(
                                         value = file.name,
                                         onValueChange = { vm.updateFile(file.key, name = it) },
-                                        label = { Text("Nama file") },
-                                        placeholder = { Text("contoh: main.kt") },
+                                        label = { Text("File name") },
+                                        placeholder = { Text("e.g. main.kt") },
                                         leadingIcon = { Icon(Icons.Outlined.Description, null) },
                                         singleLine = true,
                                         keyboardOptions = KeyboardOptions(
@@ -192,7 +192,7 @@ fun EditorScreen(
                                     )
                                     if (state.files.size > 1) {
                                         IconButton(onClick = { vm.removeFile(file.key) }) {
-                                            Icon(Icons.Outlined.Delete, "Hapus file", tint = MaterialTheme.colorScheme.error)
+                                            Icon(Icons.Outlined.Delete, "Remove file", tint = MaterialTheme.colorScheme.error)
                                         }
                                     }
                                 }
@@ -202,7 +202,7 @@ fun EditorScreen(
                                 OutlinedTextField(
                                     value = file.content,
                                     onValueChange = { vm.updateFile(file.key, content = it) },
-                                    placeholder = { Text("Tulis atau tempel kode di sini…", style = MonoStyle) },
+                                    placeholder = { Text("Write or paste code here…", style = MonoStyle) },
                                     textStyle = MonoStyle,
                                     minLines = 8,
                                     visualTransformation = transformation,
@@ -221,7 +221,7 @@ fun EditorScreen(
                         OutlinedButton(onClick = vm::addFile, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Default.Add, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Tambah file")
+                            Text("Add file")
                         }
                     }
                 }
@@ -232,10 +232,10 @@ fun EditorScreen(
     if (confirmDiscard) {
         AlertDialog(
             onDismissRequest = { confirmDiscard = false },
-            title = { Text("Buang perubahan?") },
-            text = { Text("Perubahan yang belum disimpan akan hilang.") },
-            confirmButton = { TextButton(onClick = { confirmDiscard = false; onClose() }) { Text("Buang") } },
-            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Lanjut edit") } },
+            title = { Text("Discard changes?") },
+            text = { Text("Your unsaved changes will be lost.") },
+            confirmButton = { TextButton(onClick = { confirmDiscard = false; onClose() }) { Text("Discard") } },
+            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Keep editing") } },
         )
     }
 }

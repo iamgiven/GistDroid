@@ -75,7 +75,7 @@ fun rememberCodeColors(): CodeColors {
     }
 }
 
-/** Transformasi visual untuk highlight di dalam text field editor. */
+/** Visual transformation that highlights code inside the editor text field. */
 class HighlightTransformation(
     private val filename: String,
     private val colors: CodeColors,
@@ -165,9 +165,9 @@ fun FileCard(filename: String, content: String, language: String?, modifier: Mod
             }
             IconButton(onClick = {
                 clipboard.setText(AnnotatedString(content))
-                context.toast("$filename disalin")
+                context.toast("$filename copied")
             }) {
-                Icon(Icons.Default.ContentCopy, "Salin", Modifier.size(20.dp))
+                Icon(Icons.Default.ContentCopy, "Copy", Modifier.size(20.dp))
             }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -185,7 +185,7 @@ fun SearchField(query: String, onQueryChange: (String) -> Unit, placeholder: Str
         leadingIcon = { Icon(Icons.Default.Search, null) },
         trailingIcon = {
             if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) { Icon(Icons.Default.Close, "Hapus") }
+                IconButton(onClick = { onQueryChange("") }) { Icon(Icons.Default.Close, "Delete") }
             }
         },
         singleLine = true,
@@ -299,5 +299,5 @@ fun Context.shareText(text: String, subject: String? = null) {
         putExtra(Intent.EXTRA_TEXT, text)
         if (subject != null) putExtra(Intent.EXTRA_SUBJECT, subject)
     }
-    startActivity(Intent.createChooser(intent, "Bagikan"))
+    startActivity(Intent.createChooser(intent, "Share"))
 }
