@@ -135,7 +135,7 @@ private fun BadgeTone.color(): Color {
 
 /** Small outlined status pill, e.g. "● PUBLIC", tinted by its [BadgeTone]. */
 @Composable
-fun StatusBadge(badge: Badge) {
+fun StatusBadge(badge: Badge, compact: Boolean = false) {
     val text = badge.text
     val fg = badge.tone.color()
     Surface(
@@ -143,13 +143,16 @@ fun StatusBadge(badge: Badge) {
         color = fg.copy(alpha = 0.10f),
         border = BorderStroke(1.dp, fg.copy(alpha = 0.35f)),
     ) {
-        Row(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(6.dp).background(fg, CircleShape))
-            Spacer(Modifier.width(6.dp))
+        Row(
+            Modifier.padding(horizontal = if (compact) 8.dp else 10.dp, vertical = if (compact) 2.dp else 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(if (compact) 5.dp else 6.dp).background(fg, CircleShape))
+            Spacer(Modifier.width(if (compact) 4.dp else 6.dp))
             Text(
                 text.uppercase(),
                 color = fg,
-                style = MaterialTheme.typography.labelMedium,
+                style = if (compact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.sp,
             )

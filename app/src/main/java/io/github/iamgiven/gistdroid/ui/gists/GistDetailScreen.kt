@@ -144,7 +144,7 @@ fun GistDetailScreen(
                                 IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, "More") }
                                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                                     DropdownMenuItem(
-                                        text = { Text(if (localId != null) "Update local copy" else "Save locally") },
+                                        text = { Text(if (localId != null) "Update local copy" else "Save to Local") },
                                         leadingIcon = { Icon(Icons.Default.Download, null) },
                                         onClick = { menuOpen = false; vm.saveLocal() },
                                     )

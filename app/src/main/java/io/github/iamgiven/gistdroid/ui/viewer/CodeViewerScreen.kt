@@ -1,6 +1,28 @@
 package io.github.iamgiven.gistdroid.ui.viewer
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.text.format.DateUtils
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.core.content.ContextCompat
+import io.github.iamgiven.gistdroid.data.DEFAULT_CODE_FONT_SIZE
+import io.github.iamgiven.gistdroid.data.MAX_CODE_FONT_SIZE
+import io.github.iamgiven.gistdroid.data.MIN_CODE_FONT_SIZE
+import io.github.iamgiven.gistdroid.data.needsLegacyStoragePermission
+import io.github.iamgiven.gistdroid.data.saveToDownloads
+import io.github.iamgiven.gistdroid.ui.components.monoStyle
+import io.github.iamgiven.gistdroid.ui.components.shareText
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -74,6 +96,9 @@ fun CodeViewerScreen(onBack: () -> Unit, onEdit: (EditSource, String) -> Unit) {
     var wrapOverride by rememberSaveable { mutableStateOf<Boolean?>(null) }
     val wrap = wrapOverride ?: wrapDefault
     var infoOpen by remember { mutableStateOf(false) }
+    var moreOpen by remember { mutableStateOf(false) }
+    val fontSize by container.settings.codeFontSize.collectAsStateWithLifecycle(initialValue = DEFAULT_CODE_FONT_SIZE)
+    val scope = rememberCoroutineScope()
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
 
@@ -82,6 +107,16 @@ fun CodeViewerScreen(onBack: () -> Unit, onEdit: (EditSource, String) -> Unit) {
         // Nothing to show (e.g. the process was restarted) - go back.
         LaunchedEffect(Unit) { onBack() }
         return
+    }
+    val download: () -> Unit = {
+        scope.launch {
+            runCatching { saveToDownloads(context, f.filename, f.content) }
+                .onSuccess { context.toast("Saved to Download/$it") }
+                .onFailure { context.toast("Couldn't save: ${it.message}") }
+        }
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) download() else context.toast("Storage permission is needed to save files")
     }
     val lines = remember(f.content) { f.content.count { it == '\n' } + 1 }
     val language = f.language ?: languageFromName(f.filename)
@@ -122,14 +157,6 @@ fun CodeViewerScreen(onBack: () -> Unit, onEdit: (EditSource, String) -> Unit) {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                 },
                 actions = {
-                    IconButton(onClick = { wrapOverride = !wrap }, modifier = Modifier.size(40.dp)) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.WrapText,
-                            if (wrap) "Disable word wrap" else "Enable word wrap",
-                            tint = if (wrap) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
                     IconButton(
                         onClick = {
                             clipboard.setText(AnnotatedString(f.content))
@@ -139,7 +166,68 @@ fun CodeViewerScreen(onBack: () -> Unit, onEdit: (EditSource, String) -> Unit) {
                     ) { Icon(Icons.Default.ContentCopy, "Copy") }
                     val source = f.edit
                     if (source != null) {
-                        IconButton(onClick = { onEdit(source, f.filename) }) { Icon(Icons.Outlined.Edit, "Edit") }
+                        IconButton(onClick = { onEdit(source, f.filename) }, modifier = Modifier.size(40.dp)) {
+                            Icon(Icons.Outlined.Edit, "Edit")
+                        }
+                    }
+                    Box {
+                        IconButton(onClick = { moreOpen = true }) { Icon(Icons.Default.MoreVert, "More") }
+                        DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Wrap lines") },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.WrapText, null) },
+                                trailingIcon = { Checkbox(checked = wrap, onCheckedChange = null) },
+                                onClick = { wrapOverride = !wrap },
+                            )
+                            // Text size: stays open so it can be tapped repeatedly.
+                            Row(
+                                Modifier.padding(start = 12.dp, end = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    Icons.Default.FormatSize, null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    "${fontSize.toInt()} sp",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.width(48.dp),
+                                )
+                                IconButton(
+                                    onClick = { scope.launch { container.settings.setCodeFontSize(fontSize - 1) } },
+                                    enabled = fontSize > MIN_CODE_FONT_SIZE,
+                                ) { Icon(Icons.Default.ZoomOut, "Zoom out") }
+                                IconButton(
+                                    onClick = { scope.launch { container.settings.setCodeFontSize(fontSize + 1) } },
+                                    enabled = fontSize < MAX_CODE_FONT_SIZE,
+                                ) { Icon(Icons.Default.ZoomIn, "Zoom in") }
+                            }
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text("Download") },
+                                leadingIcon = { Icon(Icons.Default.Download, null) },
+                                onClick = {
+                                    moreOpen = false
+                                    if (needsLegacyStoragePermission && ContextCompat.checkSelfPermission(
+                                            context, Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                                        ) != PackageManager.PERMISSION_GRANTED
+                                    ) {
+                                        permissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                                    } else {
+                                        download()
+                                    }
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Share") },
+                                leadingIcon = { Icon(Icons.Default.Share, null) },
+                                onClick = {
+                                    moreOpen = false
+                                    context.shareText(f.content, f.filename)
+                                },
+                            )
+                        }
                     }
                 },
             )
@@ -152,7 +240,7 @@ fun CodeViewerScreen(onBack: () -> Unit, onEdit: (EditSource, String) -> Unit) {
                 .background(MaterialTheme.colorScheme.surfaceContainerLow)
                 .verticalScroll(rememberScrollState())
         ) {
-            CodeView(code = f.content, filename = f.filename, wrap = wrap)
+            CodeView(code = f.content, filename = f.filename, wrap = wrap, style = monoStyle(fontSize))
         }
     }
 }

@@ -139,7 +139,14 @@ private const val TRUNCATE_THRESHOLD = 12
  * aligned with the first visual line of a wrapped source line.
  */
 @Composable
-fun CodeView(code: String, filename: String, wrap: Boolean, maxLines: Int? = null, modifier: Modifier = Modifier) {
+fun CodeView(
+    code: String,
+    filename: String,
+    wrap: Boolean,
+    maxLines: Int? = null,
+    modifier: Modifier = Modifier,
+    style: TextStyle = MonoStyle,
+) {
     val colors = rememberCodeColors()
     val highlighted = remember(code, filename, colors) { SyntaxHighlighter.highlight(code, filename, colors) }
     val lineStarts = remember(code) {
@@ -152,16 +159,13 @@ fun CodeView(code: String, filename: String, wrap: Boolean, maxLines: Int? = nul
     val visibleEnd = if (shown < lineStarts.size) lineStarts[shown] - 1 else code.length
     val numberColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
     val gutterColor = MaterialTheme.colorScheme.surfaceContainer
-    val gutterWidth = with(LocalDensity.current) {
-        // Width of the widest line number in monospace + padding.
-        (shown.toString().length * 8.sp.toDp().value).dp + 20.dp
-    }
+    val gutterW = gutterWidth(shown, style.fontSize)
 
     if (wrap) {
         SelectionContainer(modifier.fillMaxWidth()) {
             Column {
                 Row(Modifier.fillMaxWidth().height(12.dp)) {
-                    Box(Modifier.width(gutterWidth).fillMaxHeight().background(gutterColor))
+                    Box(Modifier.width(gutterW).fillMaxHeight().background(gutterColor))
                 }
                 for (i in 0 until shown) {
                     val lineEnd = if (i + 1 < lineStarts.size) lineStarts[i + 1] - 1 else code.length
@@ -169,11 +173,11 @@ fun CodeView(code: String, filename: String, wrap: Boolean, maxLines: Int? = nul
                         DisableSelection {
                             Text(
                                 (i + 1).toString(),
-                                style = MonoStyle,
+                                style = style,
                                 color = numberColor,
                                 textAlign = TextAlign.End,
                                 modifier = Modifier
-                                    .width(gutterWidth)
+                                    .width(gutterW)
                                     .fillMaxHeight()
                                     .background(gutterColor)
                                     .padding(end = 8.dp),
@@ -181,7 +185,7 @@ fun CodeView(code: String, filename: String, wrap: Boolean, maxLines: Int? = nul
                         }
                         Text(
                             highlighted.subSequence(lineStarts[i], lineEnd),
-                            style = MonoStyle,
+                            style = style,
                             color = MaterialTheme.colorScheme.onSurface,
                             softWrap = true,
                             modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
@@ -189,7 +193,7 @@ fun CodeView(code: String, filename: String, wrap: Boolean, maxLines: Int? = nul
                     }
                 }
                 Row(Modifier.fillMaxWidth().height(12.dp)) {
-                    Box(Modifier.width(gutterWidth).fillMaxHeight().background(gutterColor))
+                    Box(Modifier.width(gutterW).fillMaxHeight().background(gutterColor))
                 }
             }
         }
@@ -198,11 +202,11 @@ fun CodeView(code: String, filename: String, wrap: Boolean, maxLines: Int? = nul
         Row(modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             Text(
                 text = numbers,
-                style = MonoStyle,
+                style = style,
                 color = numberColor,
                 textAlign = TextAlign.End,
                 modifier = Modifier
-                    .width(gutterWidth)
+                    .width(gutterW)
                     .fillMaxHeight()
                     .background(gutterColor)
                     .padding(end = 8.dp, top = 12.dp, bottom = 12.dp),
@@ -214,7 +218,7 @@ fun CodeView(code: String, filename: String, wrap: Boolean, maxLines: Int? = nul
             ) {
                 Text(
                     text = if (visibleEnd < code.length) highlighted.subSequence(0, visibleEnd) else highlighted,
-                    style = MonoStyle,
+                    style = style,
                     color = MaterialTheme.colorScheme.onSurface,
                     softWrap = false,
                     modifier = Modifier.padding(12.dp),

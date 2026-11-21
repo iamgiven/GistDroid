@@ -5,6 +5,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.BitmapFactory
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import android.os.Build
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.ImageBitmap
@@ -262,7 +264,10 @@ fun SettingsScreen() {
                             }
                         }
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                Modifier.toggleable(value = dynamic, role = Role.Switch, onValueChange = { vm.setDynamic(it) }),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
                                 Column(Modifier.weight(1f)) {
                                     Text("Dynamic color", style = MaterialTheme.typography.bodyLarge)
                                     Text(
@@ -271,10 +276,13 @@ fun SettingsScreen() {
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
-                                Switch(checked = dynamic, onCheckedChange = { vm.setDynamic(it) })
+                                Switch(checked = dynamic, onCheckedChange = null)
                             }
                         }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            Modifier.toggleable(value = wrapCode, role = Role.Switch, onValueChange = { vm.setWrapCode(it) }),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             Column(Modifier.weight(1f)) {
                                 Text("Wrap long lines", style = MaterialTheme.typography.bodyLarge)
                                 Text(
@@ -283,7 +291,7 @@ fun SettingsScreen() {
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            Switch(checked = wrapCode, onCheckedChange = { vm.setWrapCode(it) })
+                            Switch(checked = wrapCode, onCheckedChange = null)
                         }
                     }
                 }

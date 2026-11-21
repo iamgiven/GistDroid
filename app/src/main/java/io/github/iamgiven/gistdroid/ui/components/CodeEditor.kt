@@ -33,15 +33,22 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /** Width of a line-number gutter for [lineCount] lines (shared by the viewer and the editor). */
 @Composable
-fun gutterWidth(lineCount: Int): Dp = with(LocalDensity.current) {
-    (lineCount.toString().length * 8.sp.toDp().value).dp + 20.dp
+fun gutterWidth(lineCount: Int, fontSize: TextUnit = MonoStyle.fontSize): Dp = with(LocalDensity.current) {
+    // Monospace digits are ~0.62em wide.
+    (fontSize * 0.62f).toDp() * lineCount.toString().length + 20.dp
 }
+
+/** [MonoStyle] scaled to [fontSize] (sp). */
+fun monoStyle(fontSize: Float): TextStyle =
+    MonoStyle.copy(fontSize = fontSize.sp, lineHeight = (fontSize * 1.46f).sp)
 
 private val CodePadding = 12.dp
 
@@ -56,6 +63,7 @@ fun CodeEditor(
     filename: String,
     wrap: Boolean,
     modifier: Modifier = Modifier,
+    style: TextStyle = MonoStyle,
 ) {
     val colors = rememberCodeColors()
     val transformation = remember(filename, colors) { HighlightTransformation(filename, colors) }
@@ -67,8 +75,8 @@ fun CodeEditor(
         }
     }
     val measurer = rememberTextMeasurer()
-    val numberStyle = MonoStyle.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f))
-    val gutter = gutterWidth(lineStarts.size)
+    val numberStyle = style.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f))
+    val gutter = gutterWidth(lineStarts.size, style.fontSize)
     val gutterColor = MaterialTheme.colorScheme.surfaceContainer
     val density = LocalDensity.current
 
@@ -106,7 +114,7 @@ fun CodeEditor(
                 BasicTextField(
                     value = value,
                     onValueChange = onValueChange,
-                    textStyle = MonoStyle.copy(color = MaterialTheme.colorScheme.onSurface),
+                    textStyle = style.copy(color = MaterialTheme.colorScheme.onSurface),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     visualTransformation = transformation,
                     onTextLayout = { layout = it },
@@ -127,7 +135,7 @@ fun CodeEditor(
                             if (value.isEmpty()) {
                                 Text(
                                     "Write or paste code here…",
-                                    style = MonoStyle,
+                                    style = style,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                 )
                             }

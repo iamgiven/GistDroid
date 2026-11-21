@@ -102,7 +102,19 @@ class EditorViewModel(
     }
 
     private fun current() = _state.value.let { s -> Triple(s.description, s.isPublic, s.files.map { it.name to it.content }) }
-    private fun takeSnapshot() { snapshot = current() }
+    private fun takeSnapshot() {
+        snapshot = current()
+        originals = _state.value.files.associate { it.key to (it.name to it.content) }
+    }
+
+    /** File contents as last loaded/saved, to mark changed files in the list. */
+    private var originals: Map<Long, Pair<String, String>> = emptyMap()
+
+    /** "New" for added files, "Edited" for changed ones, null otherwise. */
+    fun changeLabel(file: EditableFile): String? {
+        val original = originals[file.key] ?: return "New"
+        return if (original != (file.name to file.content)) "Edited" else null
+    }
     fun isDirty(): Boolean = !_state.value.loading && snapshot != null && snapshot != current()
 
     fun setDescription(v: String) = _state.update { it.copy(description = v) }

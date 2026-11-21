@@ -3,6 +3,7 @@ package io.github.iamgiven.gistdroid.data
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +15,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
+const val DEFAULT_CODE_FONT_SIZE = 13f
+const val MIN_CODE_FONT_SIZE = 9f
+const val MAX_CODE_FONT_SIZE = 24f
 
 private val Context.dataStore by preferencesDataStore(name = "settings")
 
@@ -27,6 +32,7 @@ class SettingsStore(private val context: Context) {
     private val themeKey = stringPreferencesKey("theme")
     private val dynamicKey = booleanPreferencesKey("dynamic_color")
     private val wrapKey = booleanPreferencesKey("wrap_code")
+    private val fontSizeKey = floatPreferencesKey("code_font_size")
 
     @Volatile
     private var decrypted: Pair<String, String?>? = null
@@ -95,6 +101,13 @@ class SettingsStore(private val context: Context) {
     }
 
     val wrapCode: Flow<Boolean> = context.dataStore.data.map { it[wrapKey] ?: false }.distinctUntilChanged()
+
+    /** Font size (sp) of the full-screen code viewer/editor. */
+    val codeFontSize: Flow<Float> = context.dataStore.data.map { it[fontSizeKey] ?: DEFAULT_CODE_FONT_SIZE }.distinctUntilChanged()
+
+    suspend fun setCodeFontSize(size: Float) {
+        context.dataStore.edit { it[fontSizeKey] = size.coerceIn(MIN_CODE_FONT_SIZE, MAX_CODE_FONT_SIZE) }
+    }
 
     suspend fun setWrapCode(enabled: Boolean) {
         context.dataStore.edit { it[wrapKey] = enabled }

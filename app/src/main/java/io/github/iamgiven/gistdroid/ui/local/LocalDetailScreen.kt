@@ -132,16 +132,6 @@ fun LocalDetailScreen(
                                 IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, "More") }
                                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                                     DropdownMenuItem(
-                                        text = { Text("Share content") },
-                                        leadingIcon = { Icon(Icons.Default.Share, null) },
-                                        onClick = {
-                                            menuOpen = false
-                                            val text = if (s.files.size == 1) s.files[0].content
-                                            else s.files.joinToString("\n\n") { "// ${it.name}\n${it.content}" }
-                                            context.shareText(text, s.title)
-                                        },
-                                    )
-                                    DropdownMenuItem(
                                         text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
                                         leadingIcon = {
                                             Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)

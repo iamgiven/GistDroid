@@ -68,6 +68,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material.icons.outlined.Save
+import androidx.compose.runtime.key
+import io.github.iamgiven.gistdroid.data.DEFAULT_CODE_FONT_SIZE
+import io.github.iamgiven.gistdroid.ui.components.monoStyle
+import io.github.iamgiven.gistdroid.ui.components.BadgeTone
+import io.github.iamgiven.gistdroid.ui.components.StatusBadge
+import io.github.iamgiven.gistdroid.ui.components.tone
 import androidx.compose.foundation.background
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.automirrored.filled.WrapText
@@ -137,21 +144,37 @@ fun EditorScreen(
         }
     }
 
-    // Full-screen page for a single file.
+    // While a file requested by the viewer is loading, show a blank page instead of the file list.
+    if (!initialHandled && state.loading) {
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerLow))
+        return
+    }
+
+    // Full-screen page for a single file (the viewer's file is shown immediately, before the effect above runs).
     val editing = state.files.firstOrNull { it.key == editingKey }
+        ?: if (!initialHandled) state.files.firstOrNull { it.name == initialFile } else null
     if (editing != null) {
-        FileEditorPage(
-            file = editing,
-            onNameChange = { vm.updateFile(editing.key, name = it) },
-            onContentChange = { vm.updateFile(editing.key, content = it) },
-            onDelete = if (state.files.size > 1) {
-                {
+        key(editing.key) {
+            FileEditorPage(
+                file = editing,
+                onSave = { name, content -> vm.updateFile(editing.key, name = name, content = content) },
+                onDelete = if (state.files.size > 1) {
+                    {
+                        editingKey = null
+                        vm.removeFile(editing.key)
+                    }
+                } else null,
+                onClose = {
+                    // Drop a freshly added file that was never filled in.
+                    val current = vm.state.value.files.firstOrNull { it.key == editing.key }
+                    if (current != null && current.name.isBlank() && current.content.isBlank() &&
+                        vm.state.value.files.size > 1
+                    ) vm.removeFile(editing.key)
+                    initialHandled = true
                     editingKey = null
-                    vm.removeFile(editing.key)
-                }
-            } else null,
-            onDone = { editingKey = null },
-        )
+                },
+            )
+        }
         return
     }
 
@@ -257,6 +280,7 @@ fun EditorScreen(
                         ReorderableItem(reorderState, key = file.key) { isDragging ->
                             FileRow(
                                 file = file,
+                                changeLabel = vm.changeLabel(file),
                                 codeColors = codeColors,
                                 dragging = isDragging,
                                 onOpen = { editingKey = file.key },
@@ -307,6 +331,7 @@ fun EditorScreen(
 @Composable
 private fun FileRow(
     file: EditableFile,
+    changeLabel: String?,
     codeColors: CodeColors,
     dragging: Boolean,
     onOpen: () -> Unit,
@@ -344,13 +369,20 @@ private fun FileRow(
                 Spacer(Modifier.width(12.dp))
             }
             Column(Modifier.weight(1f)) {
-                Text(
-                    file.name.ifBlank { "Untitled file" },
-                    style = MaterialTheme.typography.titleSmall,
-                    fontStyle = if (file.name.isBlank()) FontStyle.Italic else FontStyle.Normal,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        file.name.ifBlank { "Untitled file" },
+                        style = MaterialTheme.typography.titleSmall,
+                        fontStyle = if (file.name.isBlank()) FontStyle.Italic else FontStyle.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (changeLabel != null) {
+                        Spacer(Modifier.width(8.dp))
+                        StatusBadge(changeLabel tone BadgeTone.BLUE, compact = true)
+                    }
+                }
                 Text(
                     listOfNotNull(
                         languageFromName(file.name),
@@ -386,24 +418,35 @@ private fun FileRow(
     }
 }
 
-/** Full-screen page that edits one file, styled like the full-screen code viewer. */
+/**
+ * Full-screen page that edits one file, styled like the full-screen code viewer.
+ * Edits are kept in a draft until saved with the floppy button; leaving with unsaved changes asks
+ * whether to save, discard or keep editing.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FileEditorPage(
     file: EditableFile,
-    onNameChange: (String) -> Unit,
-    onContentChange: (String) -> Unit,
+    onSave: (name: String, content: String) -> Unit,
     onDelete: (() -> Unit)?,
-    onDone: () -> Unit,
+    onClose: () -> Unit,
 ) {
-    BackHandler(onBack = onDone)
+    var name by rememberSaveable { mutableStateOf(file.name) }
+    var content by remember { mutableStateOf(file.content) }
+    val dirty = name != file.name || content != file.content
+    var confirmLeave by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
-    val wrapDefault by appContainer().settings.wrapCode.collectAsStateWithLifecycle(initialValue = false)
+    val container = appContainer()
+    val wrapDefault by container.settings.wrapCode.collectAsStateWithLifecycle(initialValue = false)
+    val fontSize by container.settings.codeFontSize.collectAsStateWithLifecycle(initialValue = DEFAULT_CODE_FONT_SIZE)
     var wrapOverride by rememberSaveable { mutableStateOf<Boolean?>(null) }
     val wrap = wrapOverride ?: wrapDefault
     val nameFocus = remember { FocusRequester() }
-    val lines = remember(file.content) { file.content.count { it == '\n' } + 1 }
+    val lines = remember(content) { content.count { it == '\n' } + 1 }
     LaunchedEffect(Unit) { if (file.name.isBlank() && file.content.isBlank()) nameFocus.requestFocus() }
+
+    val leave: () -> Unit = { if (dirty) confirmLeave = true else onClose() }
+    BackHandler(onBack = leave)
 
     Scaffold(
         topBar = {
@@ -411,8 +454,8 @@ private fun FileEditorPage(
                 title = {
                     Column {
                         BasicTextField(
-                            value = file.name,
-                            onValueChange = onNameChange,
+                            value = name,
+                            onValueChange = { name = it },
                             singleLine = true,
                             textStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
@@ -420,7 +463,7 @@ private fun FileEditorPage(
                             modifier = Modifier.fillMaxWidth().focusRequester(nameFocus),
                             decorationBox = { inner ->
                                 Box {
-                                    if (file.name.isEmpty()) {
+                                    if (name.isEmpty()) {
                                         Text(
                                             "File name (e.g. main.kt)",
                                             style = MaterialTheme.typography.titleLarge,
@@ -432,15 +475,18 @@ private fun FileEditorPage(
                             },
                         )
                         Text(
-                            listOfNotNull(languageFromName(file.name), "$lines ${if (lines == 1) "line" else "lines"}")
-                                .joinToString(" · "),
+                            listOfNotNull(
+                                languageFromName(name),
+                                "$lines ${if (lines == 1) "line" else "lines"}",
+                                if (dirty) "Unsaved" else null,
+                            ).joinToString(" · "),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                    IconButton(onClick = leave) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                 },
                 actions = {
                     IconButton(onClick = { wrapOverride = !wrap }, modifier = Modifier.size(40.dp)) {
@@ -455,7 +501,9 @@ private fun FileEditorPage(
                             Icon(Icons.Outlined.Delete, "Remove file", tint = MaterialTheme.colorScheme.error)
                         }
                     }
-                    IconButton(onClick = onDone) { Icon(Icons.Default.Check, "Done") }
+                    IconButton(onClick = { onSave(name, content) }, enabled = dirty) {
+                        Icon(Icons.Outlined.Save, "Save file")
+                    }
                 },
             )
         },
@@ -468,12 +516,38 @@ private fun FileEditorPage(
                 .imePadding()
         ) {
             CodeEditor(
-                value = file.content,
-                onValueChange = onContentChange,
-                filename = file.name,
+                value = content,
+                onValueChange = { content = it },
+                filename = name,
                 wrap = wrap,
+                style = monoStyle(fontSize),
             )
         }
+    }
+
+    if (confirmLeave) {
+        AlertDialog(
+            onDismissRequest = { confirmLeave = false },
+            icon = { Icon(Icons.Outlined.Save, null) },
+            title = { Text("Save changes?") },
+            text = { Text("\"${name.ifBlank { "Untitled file" }}\" has unsaved changes.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmLeave = false
+                    onSave(name, content)
+                    onClose()
+                }) { Text("Save") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        confirmLeave = false
+                        onClose()
+                    }) { Text("Discard", color = MaterialTheme.colorScheme.error) }
+                    TextButton(onClick = { confirmLeave = false }) { Text("Cancel") }
+                }
+            },
+        )
     }
 
     if (confirmDelete && onDelete != null) {
@@ -481,7 +555,7 @@ private fun FileEditorPage(
             onDismissRequest = { confirmDelete = false },
             icon = { Icon(Icons.Outlined.Delete, null) },
             title = { Text("Remove file?") },
-            text = { Text("\"${file.name.ifBlank { "Untitled file" }}\" will be removed.") },
+            text = { Text("\"${name.ifBlank { "Untitled file" }}\" will be removed.") },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
