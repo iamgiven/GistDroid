@@ -77,6 +77,9 @@ class GistListViewModel(private val c: AppContainer) : ViewModel() {
         }
     }
 
+    private var page = 1
+    private var job: Job? = null
+
     init {
         viewModelScope.launch {
             combine(c.settings.token, c.gistChanges) { token, _ -> token }.collect { token ->
