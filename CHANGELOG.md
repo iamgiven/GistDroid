@@ -6,7 +6,7 @@ All notable changes to GistDroid are listed here. The format follows
 
 ## [Unreleased]
 
-## [1.0.0] - Unreleased
+## [1.0.0] - 2026-11-24
 
 First public release.
 
