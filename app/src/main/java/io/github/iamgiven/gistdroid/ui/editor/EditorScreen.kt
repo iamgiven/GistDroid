@@ -1,6 +1,9 @@
 package io.github.iamgiven.gistdroid.ui.editor
 
+import android.view.View
 import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.outlined.FileUpload
@@ -116,6 +119,13 @@ fun EditorScreen(
 ) {
     val vm = appViewModel { EditorViewModel(it, target, id) }
     val state by vm.state.collectAsStateWithLifecycle()
+    // Code and file names aren't credentials: keep password managers from offering autofill here.
+    val view = LocalView.current
+    DisposableEffect(view) {
+        val previous = view.importantForAutofill
+        view.importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
+        onDispose { view.importantForAutofill = previous }
+    }
     val snackbar = remember { SnackbarHostState() }
     val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         vm.uploadFiles(uris)
@@ -382,6 +392,22 @@ private fun FileRow(
 ) {
     val lines = remember(file.content) { if (file.content.isEmpty()) 0 else file.content.count { it == '\n' } + 1 }
     val preview = remember(file.content, file.name, codeColors) { previewOf(file.content, file.name, codeColors) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    if (confirmDelete && onDelete != null) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            icon = { Icon(Icons.Outlined.Delete, null) },
+            title = { Text("Remove file?") },
+            text = { Text("\"${file.name.ifBlank { "Untitled file" }}\" will be removed.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDelete = false
+                    onDelete()
+                }) { Text("Remove") }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
+        )
+    }
     val shape = RoundedCornerShape(24.dp)
     Card(
         onClick = onOpen,
@@ -438,7 +464,7 @@ private fun FileRow(
                 Icon(Icons.Outlined.Edit, "Edit file", Modifier.size(20.dp))
             }
             if (onDelete != null) {
-                IconButton(onClick = onDelete, modifier = Modifier.size(40.dp)) {
+                IconButton(onClick = { confirmDelete = true }, modifier = Modifier.size(40.dp)) {
                     Icon(Icons.Outlined.Delete, "Remove file", Modifier.size(20.dp), tint = MaterialTheme.colorScheme.error)
                 }
             }
@@ -501,15 +527,17 @@ private fun FileEditorPage(
                             singleLine = true,
                             textStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Uri),
+                            keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Ascii),
                             modifier = Modifier.fillMaxWidth().focusRequester(nameFocus),
                             decorationBox = { inner ->
                                 Box {
                                     if (name.isEmpty()) {
                                         Text(
-                                            "File name (e.g. main.kt)",
+                                            "File name, e.g. main.kt",
                                             style = MaterialTheme.typography.titleLarge,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
                                         )
                                     }
                                     inner()
@@ -524,6 +552,8 @@ private fun FileEditorPage(
                             ).joinToString(" · "),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 },
