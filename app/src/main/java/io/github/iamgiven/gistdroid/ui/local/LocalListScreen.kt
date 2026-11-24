@@ -57,7 +57,7 @@ import io.github.iamgiven.gistdroid.ui.components.SnippetCard
 import io.github.iamgiven.gistdroid.ui.components.Badge
 import io.github.iamgiven.gistdroid.ui.components.Languages
 import io.github.iamgiven.gistdroid.ui.components.fileCount
-import io.github.iamgiven.gistdroid.ui.components.cardPreviewOf
+import io.github.iamgiven.gistdroid.ui.components.previewOf
 import io.github.iamgiven.gistdroid.ui.components.MetaChip
 import io.github.iamgiven.gistdroid.ui.components.MonoStyle
 import io.github.iamgiven.gistdroid.ui.components.SearchField
@@ -144,7 +144,7 @@ fun LocalListScreen(onOpen: (Long) -> Unit, onCreate: () -> Unit) {
 private fun SnippetItem(snippet: Snippet, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = rememberCodeColors()
     val first = snippet.files.firstOrNull()
-    val preview = remember(first, colors) { first?.let { cardPreviewOf(it.content, it.name, colors) } }
+    val preview = remember(first, colors) { first?.let { previewOf(it.content, it.name, colors) } }
     val language = remember(snippet.files) {
         Languages.summarize(snippet.files.map { Languages.detect(null, it.name) to it.content.length.toLong() })
     }

@@ -193,7 +193,7 @@ private val PreviewShape = RoundedCornerShape(10.dp)
 
 /**
  * Card used by both the gist list and the local snippet list: language logo, title and status,
- * then a divider, a metadata row (language label first) and a one-line code preview.
+ * then a divider, a metadata row (language label first) and a code preview of up to three lines.
  */
 @Composable
 fun SnippetCard(
@@ -254,19 +254,19 @@ fun SnippetCard(
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     shape = PreviewShape,
+                    border = cardBorder(),
                     modifier = Modifier.fillMaxWidth().animateContentSize(),
                 ) {
                     Crossfade(targetState = preview, label = "preview") { text ->
-                        Box(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                        Box(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                             if (text == null) {
-                                SkeletonLines(listOf(0.7f))
+                                SkeletonLines(listOf(0.8f, 0.55f, 0.68f))
                             } else {
                                 Text(
                                     text,
                                     style = MonoStyle.copy(fontSize = 12.sp),
                                     color = muted,
-                                    maxLines = 1,
-                                    softWrap = false,
+                                    maxLines = 3,
                                     overflow = TextOverflow.Ellipsis,
                                 )
                             }
@@ -304,10 +304,11 @@ fun SkeletonCard() {
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainerLow,
                 shape = PreviewShape,
+                border = cardBorder(),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Box(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
-                    SkeletonLines(listOf(0.7f))
+                Box(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    SkeletonLines(listOf(0.8f, 0.55f, 0.68f))
                 }
             }
         }

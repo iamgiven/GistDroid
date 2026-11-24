@@ -405,14 +405,6 @@ fun previewOf(code: String?, filename: String, colors: CodeColors): AnnotatedStr
     val text = code?.trim()?.lineSequence()?.take(3)?.joinToString("\n")
     return if (text.isNullOrBlank()) null else SyntaxHighlighter.highlight(text, filename, colors)
 }
-
-/** One-line preview for list cards: the first non-blank line that isn't a shebang. */
-fun cardPreviewOf(code: String?, filename: String, colors: CodeColors): AnnotatedString? {
-    val lines = code?.lines()?.map { it.trim() }?.filter { it.isNotEmpty() } ?: return null
-    val line = lines.firstOrNull { !it.startsWith("#!") } ?: lines.firstOrNull() ?: return null
-    return SyntaxHighlighter.highlight(line, filename, colors)
-}
-
 @Composable
 fun DragHandleIcon(modifier: Modifier = Modifier) {
     Box(modifier.size(40.dp), contentAlignment = Alignment.Center) {

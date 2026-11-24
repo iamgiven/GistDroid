@@ -77,7 +77,7 @@ import io.github.iamgiven.gistdroid.ui.components.SnippetCard
 import io.github.iamgiven.gistdroid.ui.components.visibilityBadge
 import io.github.iamgiven.gistdroid.ui.components.fileCount
 import io.github.iamgiven.gistdroid.ui.components.Languages
-import io.github.iamgiven.gistdroid.ui.components.cardPreviewOf
+import io.github.iamgiven.gistdroid.ui.components.previewOf
 import io.github.iamgiven.gistdroid.ui.components.rememberCodeColors
 import androidx.compose.material.icons.outlined.Person
 import io.github.iamgiven.gistdroid.ui.components.MetaChip
@@ -238,7 +238,7 @@ private fun GistItem(
     modifier: Modifier = Modifier,
 ) {
     val colors = rememberCodeColors()
-    val highlighted = remember(preview, colors) { preview?.let { cardPreviewOf(it.content, it.filename, colors) } }
+    val highlighted = remember(preview, colors) { preview?.let { previewOf(it.content, it.filename, colors) } }
     val language = remember(gist.files) {
         Languages.summarize(gist.files.map { (name, file) -> Languages.detect(file.language, file.filename ?: name) to file.size })
     }

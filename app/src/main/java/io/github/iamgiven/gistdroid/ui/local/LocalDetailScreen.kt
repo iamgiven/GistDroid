@@ -1,6 +1,14 @@
 package io.github.iamgiven.gistdroid.ui.local
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.RadioButton
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -228,19 +236,46 @@ fun LocalDetailScreen(
 
     if (confirmUpload && s != null) {
         val linked = s.gistId != null
+        var uploadPublic by rememberSaveable { mutableStateOf(s.isPublic) }
         AlertDialog(
             onDismissRequest = { confirmUpload = false },
             icon = { Icon(Icons.Default.CloudUpload, null) },
             title = { Text(if (linked) "Sync to Gist?" else "Upload to Gist?") },
             text = {
-                Text(
-                    if (linked) "The linked gist on GitHub will be overwritten with this snippet's description and files."
-                    else "A new ${if (s.isPublic) "public" else "secret"} gist will be created on your GitHub account" +
-                        " with ${fileCount(s.files.size)}."
-                )
+                if (linked) {
+                    Text("The linked gist on GitHub will be overwritten with this snippet's description and files.")
+                } else {
+                    Column(Modifier.selectableGroup()) {
+                        Text("A new gist with ${fileCount(s.files.size)} will be created on your GitHub account.")
+                        Spacer(Modifier.height(12.dp))
+                        VisibilityOption(
+                            selected = !uploadPublic,
+                            icon = Icons.Outlined.Lock,
+                            title = "Secret",
+                            subtitle = "Only people with the link can see it",
+                            onSelect = { uploadPublic = false },
+                        )
+                        VisibilityOption(
+                            selected = uploadPublic,
+                            icon = Icons.Outlined.Public,
+                            title = "Public",
+                            subtitle = "Anyone can find it on GitHub",
+                            onSelect = { uploadPublic = true },
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "GitHub doesn't allow changing this after the gist is created.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             },
             confirmButton = {
-                TextButton(onClick = { confirmUpload = false; vm.upload() }) { Text(if (linked) "Sync" else "Upload") }
+                TextButton(onClick = {
+                    confirmUpload = false
+                    if (linked) vm.upload() else vm.upload(public = uploadPublic)
+                }) { Text(if (linked) "Sync" else "Upload") }
             },
             dismissButton = { TextButton(onClick = { confirmUpload = false }) { Text("Cancel") } },
         )
@@ -255,6 +290,34 @@ fun LocalDetailScreen(
             confirmButton = { TextButton(onClick = { confirmDelete = false; vm.delete() }) { Text("Delete") } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
         )
+    }
+}
+
+/** One radio row in the upload dialog's visibility choice. */
+@Composable
+private fun VisibilityOption(
+    selected: Boolean,
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onSelect: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Spacer(Modifier.width(12.dp))
+        Icon(icon, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 

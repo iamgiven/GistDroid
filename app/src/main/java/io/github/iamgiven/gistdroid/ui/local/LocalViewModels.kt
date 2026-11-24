@@ -70,12 +70,17 @@ class LocalDetailViewModel(private val c: AppContainer, private val id: Long) : 
         }
     }
 
-    fun upload() {
+    /**
+     * Uploads the snippet, or syncs it to its linked gist. [public] is the visibility chosen for a
+     * new gist (GitHub can't change it afterwards); it's stored on the snippet. Null keeps the saved one.
+     */
+    fun upload(public: Boolean? = null) {
         if (_state.value.busy) return
         viewModelScope.launch {
             _state.update { it.copy(busy = true) }
             try {
-                val s = c.snippetDao.get(id) ?: return@launch
+                val saved = c.snippetDao.get(id) ?: return@launch
+                val s = if (public != null && saved.gistId == null) saved.copy(isPublic = public) else saved
                 val files = s.files.filter { it.content.isNotBlank() }.map { it.name to it.content }
                 if (files.isEmpty()) {
                     _state.update { it.copy(message = "No non-empty files to upload") }

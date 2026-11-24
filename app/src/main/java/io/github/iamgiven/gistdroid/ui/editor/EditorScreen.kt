@@ -240,8 +240,9 @@ fun EditorScreen(
                             shape = RoundedCornerShape(16.dp),
                         )
                     }
-                    item(key = "visibility") {
-                        val canChange = !(target == EditorTarget.GIST && !vm.isNew)
+                    // Local snippets pick their visibility in the upload dialog instead.
+                    if (target == EditorTarget.GIST) item(key = "visibility") {
+                        val canChange = vm.isNew
                         Card(
                             shape = RoundedCornerShape(20.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
