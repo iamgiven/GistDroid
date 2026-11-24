@@ -1,5 +1,6 @@
 package io.github.iamgiven.gistdroid.ui.editor
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.iamgiven.gistdroid.AppContainer
@@ -124,6 +125,37 @@ class EditorViewModel(
         val file = newFile()
         _state.update { it.copy(files = it.files + file) }
         return file.key
+    }
+    /**
+     * Adds files picked on the device. Blank, unnamed files (like the one a new gist starts with)
+     * are replaced; names that clash with existing files get a "-2", "-3"… suffix.
+     */
+    fun uploadFiles(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        viewModelScope.launch {
+            try {
+                val picked = c.backup.readTextFiles(uris)
+                _state.update { s ->
+                    val kept = s.files.filterNot { it.name.isBlank() && it.content.isBlank() }
+                    val used = kept.map { it.name.trim() }.toMutableSet()
+                    val added = picked.map { f ->
+                        var name = f.name
+                        var n = 2
+                        while (!used.add(name)) {
+                            name = f.name.substringBeforeLast('.', f.name) + "-$n" +
+                                (if ('.' in f.name) "." + f.name.substringAfterLast('.') else "")
+                            n++
+                        }
+                        newFile(name, f.content)
+                    }
+                    s.copy(files = kept + added)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.update { it.copy(error = e.message ?: "Couldn't read the files") }
+            }
+        }
     }
     fun moveFile(fromKey: Long, toKey: Long) = _state.update { s ->
         val from = s.files.firstOrNull { it.key == fromKey }

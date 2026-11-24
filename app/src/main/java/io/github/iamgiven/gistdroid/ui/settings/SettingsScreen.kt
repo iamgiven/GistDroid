@@ -94,8 +94,10 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -449,57 +451,78 @@ private fun Context.clearClipboardIfEquals(token: String) {
     }
 }
 
-/** Row of palette swatches, shown when dynamic color is off or unavailable. */
+/**
+ * Wallpaper-picker style palette tiles, four per page with page dots, shown when dynamic color is
+ * off or unavailable.
+ */
 @Composable
 private fun PalettePicker(selected: ColorPalette, onSelect: (ColorPalette) -> Unit) {
+    val pages = ColorPalette.entries.chunked(PALETTES_PER_PAGE)
+    val pagerState = rememberPagerState(initialPage = selected.ordinal / PALETTES_PER_PAGE) { pages.size }
     Column {
         Text("Color palette", style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(12.dp))
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).selectableGroup(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            ColorPalette.entries.forEach { palette ->
-                val isSelected = palette == selected
-                Box(
-                    Modifier
-                        .size(72.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(
-                            if (isSelected) MaterialTheme.colorScheme.secondaryContainer
-                            else MaterialTheme.colorScheme.surfaceContainerHigh
-                        )
-                        .selectable(selected = isSelected, role = Role.RadioButton, onClick = { onSelect(palette) })
-                        .semantics { contentDescription = "${palette.label} palette" },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    PaletteSwatch(palette, Modifier.size(44.dp))
-                    if (isSelected) {
-                        Box(
-                            Modifier
-                                .size(22.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceContainerLowest),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(Icons.Default.Check, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurface)
-                        }
-                    }
+        HorizontalPager(state = pagerState, pageSpacing = 10.dp, modifier = Modifier.fillMaxWidth()) { page ->
+            Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                pages[page].forEach { palette ->
+                    PaletteTile(palette, palette == selected, onClick = { onSelect(palette) }, Modifier.weight(1f))
+                }
+                repeat(PALETTES_PER_PAGE - pages[page].size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+        if (pages.size > 1) {
+            Spacer(Modifier.height(14.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            ) {
+                repeat(pages.size) { i ->
+                    Box(
+                        Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (i == pagerState.currentPage) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+                            )
+                    )
                 }
             }
         }
-        Spacer(Modifier.height(8.dp))
-        Text(
-            selected.label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+    }
+}
+
+private const val PALETTES_PER_PAGE = 4
+
+/** One palette tile: the swatch, plus a check in a center circle when selected. */
+@Composable
+private fun PaletteTile(palette: ColorPalette, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val (light, darkScheme) = palette.schemes()
+    val scheme = if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) darkScheme else light
+    Box(
+        modifier
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .semantics { contentDescription = "${palette.label} palette" },
+        contentAlignment = Alignment.Center,
+    ) {
+        PaletteSwatch(palette, Modifier.fillMaxSize(0.6f))
+        if (selected) {
+            Box(
+                Modifier.fillMaxSize(0.34f).clip(CircleShape).background(scheme.primaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Default.Check, null, Modifier.fillMaxSize(0.5f), tint = scheme.onPrimaryContainer)
+            }
+        }
     }
 }
 
 /**
- * Wallpaper-picker style swatch: primary on the top half, secondary container bottom-left and
- * tertiary bottom-right, taken from the palette's light scheme.
+ * Three-part swatch: primary on the top half, secondary container bottom-left and tertiary
+ * bottom-right, from the palette's light scheme.
  */
 @Composable
 private fun PaletteSwatch(palette: ColorPalette, modifier: Modifier = Modifier) {

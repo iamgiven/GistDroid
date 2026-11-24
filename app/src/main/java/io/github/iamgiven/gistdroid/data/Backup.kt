@@ -180,19 +180,22 @@ class BackupManager(private val context: Context, private val c: AppContainer) {
         return ImportResult(imported, skipped)
     }
 
+    /** Reads text files picked on the device; throws [ImportException] for binary or oversized files. */
+    suspend fun readTextFiles(uris: List<Uri>): List<SnippetFile> = withContext(Dispatchers.IO) {
+        uris.map { uri ->
+            val name = displayName(uri) ?: "file.txt"
+            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                ?: throw ImportException("Couldn't open $name")
+            if (bytes.size > MAX_FILE_BYTES) throw ImportException("$name is larger than 1 MB")
+            val text = bytes.decodeToString()
+            if ('\u0000' in text || '�' in text) throw ImportException("$name doesn't look like a text file")
+            SnippetFile(name, text)
+        }
+    }
+
     /** Creates one local snippet from code files picked on the device; returns its id. */
     suspend fun importFiles(uris: List<Uri>): Long {
-        val files = withContext(Dispatchers.IO) {
-            uris.map { uri ->
-                val name = displayName(uri) ?: "file.txt"
-                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                    ?: throw ImportException("Couldn't open $name")
-                if (bytes.size > MAX_FILE_BYTES) throw ImportException("$name is larger than 1 MB")
-                val text = bytes.decodeToString()
-                if ('\u0000' in text || '�' in text) throw ImportException("$name doesn't look like a text file")
-                SnippetFile(name, text)
-            }
-        }
+        val files = readTextFiles(uris)
         // Make names unique within the snippet.
         val used = HashSet<String>()
         val unique = files.map { f ->

@@ -1,6 +1,9 @@
 package io.github.iamgiven.gistdroid.ui.editor
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -114,6 +117,9 @@ fun EditorScreen(
     val vm = appViewModel { EditorViewModel(it, target, id) }
     val state by vm.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
+    val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        vm.uploadFiles(uris)
+    }
     var confirmDiscard by rememberSaveable { mutableStateOf(false) }
     var editingKey by rememberSaveable { mutableStateOf<Long?>(null) }
     val codeColors = rememberCodeColors()
@@ -303,13 +309,23 @@ fun EditorScreen(
                         }
                     }
                     item(key = "add") {
-                        OutlinedButton(
-                            onClick = { editingKey = vm.addFile() },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Icon(Icons.Default.Add, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Add file")
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = { editingKey = vm.addFile() },
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Icon(Icons.Default.Add, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Add file")
+                            }
+                            OutlinedButton(
+                                onClick = { pickFiles.launch(arrayOf("*/*")) },
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Icon(Icons.Outlined.FileUpload, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Upload file")
+                            }
                         }
                     }
                 }
