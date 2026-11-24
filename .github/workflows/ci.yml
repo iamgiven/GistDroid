@@ -50,4 +50,4 @@ jobs:
         with:
           name: GistDroid-apk
           path: dist/*.apk
-          retention-days: 30
+          retention-days: 7
