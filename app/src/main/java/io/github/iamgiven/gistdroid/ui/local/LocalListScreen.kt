@@ -54,9 +54,10 @@ import io.github.iamgiven.gistdroid.ui.components.ListHeader
 import io.github.iamgiven.gistdroid.ui.components.CARD_GAP
 import io.github.iamgiven.gistdroid.ui.components.BadgeTone
 import io.github.iamgiven.gistdroid.ui.components.SnippetCard
-import io.github.iamgiven.gistdroid.ui.components.tone
+import io.github.iamgiven.gistdroid.ui.components.Badge
+import io.github.iamgiven.gistdroid.ui.components.Languages
 import io.github.iamgiven.gistdroid.ui.components.fileCount
-import io.github.iamgiven.gistdroid.ui.components.previewOf
+import io.github.iamgiven.gistdroid.ui.components.cardPreviewOf
 import io.github.iamgiven.gistdroid.ui.components.MetaChip
 import io.github.iamgiven.gistdroid.ui.components.MonoStyle
 import io.github.iamgiven.gistdroid.ui.components.SearchField
@@ -143,11 +144,15 @@ fun LocalListScreen(onOpen: (Long) -> Unit, onCreate: () -> Unit) {
 private fun SnippetItem(snippet: Snippet, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = rememberCodeColors()
     val first = snippet.files.firstOrNull()
-    val preview = remember(first, colors) { first?.let { previewOf(it.content, it.name, colors) } }
+    val preview = remember(first, colors) { first?.let { cardPreviewOf(it.content, it.name, colors) } }
+    val language = remember(snippet.files) {
+        Languages.summarize(snippet.files.map { Languages.detect(null, it.name) to it.content.length.toLong() })
+    }
     SnippetCard(
         title = snippet.title,
-        icon = if (snippet.gistId != null) Icons.Outlined.CloudDone else Icons.Outlined.PhoneAndroid,
-        badge = if (snippet.gistId != null) "On Gist" tone BadgeTone.BLUE else "Local" tone BadgeTone.NEUTRAL,
+        language = language,
+        badge = if (snippet.gistId != null) Badge("On Gist", BadgeTone.BLUE, Icons.Outlined.CloudDone)
+        else Badge("Local", BadgeTone.NEUTRAL, Icons.Outlined.PhoneAndroid),
         preview = preview,
         onClick = onClick,
         modifier = modifier,

@@ -47,3 +47,8 @@ adb install -r /tmp/gistdroid/GistDroid-*.apk
 ## Stack
 
 Kotlin · Jetpack Compose · Material 3 · Navigation Compose · Room · DataStore · OkHttp · kotlinx.serialization
+
+## Credits
+
+Language logos from [Simple Icons](https://simpleicons.org) (CC0 1.0). Logos are trademarks of their
+respective owners; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

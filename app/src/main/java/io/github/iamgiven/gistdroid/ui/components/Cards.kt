@@ -31,6 +31,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -58,7 +61,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 val CardShape = RoundedCornerShape(28.dp)
-private val InnerShape = RoundedCornerShape(20.dp)
 
 @Composable
 fun cardBorder() = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
@@ -125,12 +127,15 @@ val HEADER_GAP = 12.dp
 
 enum class BadgeTone { BLUE, RED, GREEN, NEUTRAL }
 
-data class Badge(val text: String, val tone: BadgeTone)
+/** A status such as "Public"; [icon] is shown by the inline [StatusLabel], the pill [StatusBadge] uses a dot. */
+data class Badge(val text: String, val tone: BadgeTone, val icon: ImageVector? = null)
 
 infix fun String.tone(tone: BadgeTone) = Badge(this, tone)
 
 /** Badge for a gist's visibility: public = blue, secret = red. */
-fun visibilityBadge(public: Boolean) = if (public) "Public" tone BadgeTone.BLUE else "Secret" tone BadgeTone.RED
+fun visibilityBadge(public: Boolean) =
+    if (public) Badge("Public", BadgeTone.BLUE, Icons.Outlined.Public)
+    else Badge("Secret", BadgeTone.RED, Icons.Outlined.Lock)
 
 @Composable
 private fun BadgeTone.color(): Color {
@@ -170,11 +175,30 @@ fun StatusBadge(badge: Badge, compact: Boolean = false) {
     }
 }
 
-/** Card used by both the gist list and the local snippet list. */
+/** Compact inline status, e.g. a lock icon followed by "Secret", tinted by its [BadgeTone]. */
+@Composable
+fun StatusLabel(badge: Badge) {
+    val fg = badge.tone.color()
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (badge.icon != null) {
+            Icon(badge.icon, null, Modifier.size(14.dp), tint = fg)
+            Spacer(Modifier.width(4.dp))
+        }
+        Text(badge.text, color = fg, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+private val ListCardShape = RoundedCornerShape(20.dp)
+private val PreviewShape = RoundedCornerShape(10.dp)
+
+/**
+ * Card used by both the gist list and the local snippet list: language logo, title and status,
+ * then a divider, a metadata row (language label first) and a one-line code preview.
+ */
 @Composable
 fun SnippetCard(
     title: String,
-    icon: ImageVector,
+    language: LanguageSummary,
     badge: Badge?,
     preview: AnnotatedString?,
     onClick: () -> Unit,
@@ -182,53 +206,67 @@ fun SnippetCard(
     previewPlaceholder: Boolean = false,
     meta: @Composable RowScope.() -> Unit,
 ) {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
     Card(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
-        shape = CardShape,
+        shape = ListCardShape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         border = cardBorder(),
     ) {
-        Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, null, Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.width(14.dp))
+                Icon(
+                    Languages.painterFor(language.primary),
+                    contentDescription = language.primary,
+                    modifier = Modifier.size(22.dp),
+                    tint = muted,
+                )
+                Spacer(Modifier.width(10.dp))
                 Text(
                     title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
                 if (badge != null) {
                     Spacer(Modifier.width(10.dp))
-                    StatusBadge(badge)
+                    StatusLabel(badge)
                 }
             }
             HorizontalDivider(
-                Modifier.padding(vertical = 14.dp),
+                Modifier.padding(vertical = 10.dp),
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp), content = meta)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                language.label?.let {
+                    Text(it, style = MaterialTheme.typography.labelMedium, color = muted, maxLines = 1)
+                }
+                meta()
+            }
             if (preview != null || previewPlaceholder) {
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(10.dp))
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    shape = InnerShape,
-                    border = cardBorder(),
+                    shape = PreviewShape,
                     modifier = Modifier.fillMaxWidth().animateContentSize(),
                 ) {
                     Crossfade(targetState = preview, label = "preview") { text ->
-                        Box(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                        Box(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
                             if (text == null) {
-                                SkeletonLines(listOf(0.8f, 0.55f, 0.68f))
+                                SkeletonLines(listOf(0.7f))
                             } else {
                                 Text(
                                     text,
-                                    style = MonoStyle,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 3,
+                                    style = MonoStyle.copy(fontSize = 12.sp),
+                                    color = muted,
+                                    maxLines = 1,
+                                    softWrap = false,
                                     overflow = TextOverflow.Ellipsis,
                                 )
                             }
@@ -245,32 +283,31 @@ fun SnippetCard(
 fun SkeletonCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = CardShape,
+        shape = ListCardShape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         border = cardBorder(),
     ) {
-        Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(24.dp).background(skeletonColor(), CircleShape))
-                Spacer(Modifier.width(14.dp))
+                Box(Modifier.size(22.dp).background(skeletonColor(), CircleShape))
+                Spacer(Modifier.width(10.dp))
                 Box(Modifier.weight(1f)) {
                     SkeletonLines(listOf(0.6f), MaterialTheme.typography.titleMedium.lineHeight)
                 }
             }
             HorizontalDivider(
-                Modifier.padding(vertical = 14.dp),
+                Modifier.padding(vertical = 10.dp),
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
             )
             SkeletonLines(listOf(0.55f), MaterialTheme.typography.labelMedium.lineHeight)
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(10.dp))
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainerLow,
-                shape = InnerShape,
-                border = cardBorder(),
+                shape = PreviewShape,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Box(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-                    SkeletonLines(listOf(0.8f, 0.55f, 0.68f))
+                Box(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                    SkeletonLines(listOf(0.7f))
                 }
             }
         }
