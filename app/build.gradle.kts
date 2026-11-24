@@ -6,7 +6,14 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-val runNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+// App version: bump for each release, then tag the commit "v<appVersion>".
+val appVersion = "1.0.0"
+// versionCode is derived from the version: 1.2.3 -> 10203.
+val appVersionCode = appVersion.split('.').map(String::toInt).let { (major, minor, patch) ->
+    major * 10_000 + minor * 100 + patch
+}
+// CI sets e.g. "-dev.42" for builds that aren't releases.
+val versionSuffix: String = System.getenv("VERSION_SUFFIX").orEmpty()
 val keystoreFile: String? = System.getenv("KEYSTORE_FILE")
 
 android {
@@ -17,8 +24,8 @@ android {
         applicationId = "io.github.iamgiven.gistdroid"
         minSdk = 26
         targetSdk = 35
-        versionCode = runNumber
-        versionName = "1.0.$runNumber"
+        versionCode = appVersionCode
+        versionName = appVersion + versionSuffix
     }
 
     signingConfigs {

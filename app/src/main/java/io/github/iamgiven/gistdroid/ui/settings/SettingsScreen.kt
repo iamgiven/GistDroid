@@ -39,6 +39,7 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Palette
@@ -342,8 +343,16 @@ fun SettingsScreen() {
                         supportingContent = { Text("github.com/iamgiven/GistDroid") },
                         leadingContent = { Icon(Icons.Outlined.Code, null) },
                         trailingContent = { Icon(Icons.AutoMirrored.Filled.OpenInNew, null) },
+                        modifier = Modifier.clickable { uriHandler.openUri("https://github.com/iamgiven/GistDroid") },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                    ListItem(
+                        headlineContent = { Text("Support development") },
+                        supportingContent = { Text("Buy me a coffee on Ko-fi") },
+                        leadingContent = { Icon(Icons.Outlined.FavoriteBorder, null) },
+                        trailingContent = { Icon(Icons.AutoMirrored.Filled.OpenInNew, null) },
                         modifier = Modifier
-                            .clickable { uriHandler.openUri("https://github.com/iamgiven/GistDroid") }
+                            .clickable { uriHandler.openUri("https://ko-fi.com/iamgiven") }
                             .padding(bottom = 4.dp),
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     )

@@ -1,0 +1,1 @@
+GitHub Gist client: manage gists and keep code snippets offline

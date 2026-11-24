@@ -1,0 +1,17 @@
+<p>GistDroid is a GitHub Gist client built with Material 3. Keep your code snippets on GitHub Gist or locally on your device, and move them between the two.</p>
+
+<ul>
+<li><b>Gists</b>: browse your own and starred gists, search, create, edit, delete, star and share them.</li>
+<li><b>Local snippets</b>: stored on the device and usable without an account. Upload one to Gist at any time, as secret or public.</li>
+<li>Several files per gist or snippet: add, upload from the device, rename, reorder and remove them.</li>
+<li>Code viewer and editor with syntax highlighting, line numbers, word wrap and adjustable text size.</li>
+<li>Share text from any app to start a snippet, or import code files.</li>
+<li>Back up local snippets and gists to a JSON file, and restore them.</li>
+<li>Material You dynamic color, built-in color palettes, and light and dark themes.</li>
+</ul>
+
+<p>Sign in with a GitHub personal access token with the <i>gist</i> scope. The token is encrypted with a key held in the Android Keystore and is only sent to api.github.com.</p>
+
+<p>No analytics, ads or tracking.</p>
+
+<p>GistDroid is not affiliated with or endorsed by GitHub, Inc.</p>
