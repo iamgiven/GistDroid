@@ -39,8 +39,15 @@ this repository to [Obtainium](https://github.com/ImranR98/Obtainium) to get upd
 
 Requires Android 8.0 (API 26) or newer.
 
-Each release lists the SHA-256 fingerprint of the signing certificate and the checksums of its APK, so you
-can check that the APK you install is the one built here.
+Release APKs are signed with this certificate (SHA-256 fingerprint), also listed in every release with the
+APK checksums:
+
+```
+67:FE:14:CA:E8:1E:BA:1A:99:B8:5A:F1:6A:01:78:D5:36:FE:BD:B3:4F:31:21:24:08:CC:E5:37:3E:23:2B:CD
+```
+
+You can check it with `apksigner verify --print-certs GistDroid-x.y.z.apk`, or let Obtainium or
+[AppVerifier](https://github.com/soupslurpr/AppVerifier) compare it for you.
 
 ## Sign-in and token security
 
