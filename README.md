@@ -1,4 +1,8 @@
-# GistDroid
+<p align="center">
+  <img src="docs/logo.svg" width="112" alt="GistDroid logo">
+</p>
+
+<h1 align="center">GistDroid</h1>
 
 [![CI](https://github.com/iamgiven/GistDroid/actions/workflows/ci.yml/badge.svg)](https://github.com/iamgiven/GistDroid/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/iamgiven/GistDroid)](https://github.com/iamgiven/GistDroid/releases/latest)
@@ -7,7 +11,13 @@
 A GitHub Gist client for Android, built with Jetpack Compose and Material 3. Keep your code snippets on
 **GitHub Gist** or **locally** on your device, and move them between the two.
 
-<!-- Screenshots: add images to docs/screenshots/ and list them here. -->
+<p align="center">
+  <img src="docs/screenshots/gists.jpg" width="30%" alt="Gist list">
+  &nbsp;
+  <img src="docs/screenshots/local.jpg" width="30%" alt="Local snippets">
+  &nbsp;
+  <img src="docs/screenshots/settings.jpg" width="30%" alt="Settings with color palettes">
+</p>
 
 ## Features
 

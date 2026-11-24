@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="18 18 72 72" role="img" aria-label="GistDroid logo">
+  <rect x="18" y="18" width="72" height="72" rx="16" fill="#13141A"/>
+  <g fill="none" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M41 41 L29 54 L41 67 M67 41 L79 54 L67 67" stroke="#FFFFFF"/>
+    <path d="M58.5 37 L49.5 71" stroke="#ADC6FF"/>
+  </g>
+</svg>
