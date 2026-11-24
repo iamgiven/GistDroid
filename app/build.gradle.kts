@@ -5,12 +5,15 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-// App version: bump for each release, then tag the commit "v<appVersion>".
-val appVersion = "1.0.1"
-// versionCode is derived from the version: 1.2.3 -> 10203.
-val appVersionCode = appVersion.split('.').map(String::toInt).let { (major, minor, patch) ->
-    major * 10_000 + minor * 100 + patch
-}
+// App version: bump both for each release, then tag the commit "v<appVersion>".
+// Both are plain literals so F-Droid's update checker can read them.
+val appVersion = "1.0.2"
+val appVersionCode = 10002 // major * 10000 + minor * 100 + patch
+check(
+    appVersionCode == appVersion.split('.').map(String::toInt).let { (major, minor, patch) ->
+        major * 10_000 + minor * 100 + patch
+    }
+) { "appVersionCode $appVersionCode doesn't match appVersion $appVersion" }
 // CI sets e.g. "-dev.42" for builds that aren't releases.
 val versionSuffix: String = System.getenv("VERSION_SUFFIX").orEmpty()
 val keystoreFile: String? = System.getenv("KEYSTORE_FILE")
@@ -44,11 +47,8 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = if (keystoreFile != null) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            // Without the release keystore (forks, F-Droid) the APK is left unsigned.
+            signingConfig = if (keystoreFile != null) signingConfigs.getByName("release") else null
         }
     }
 

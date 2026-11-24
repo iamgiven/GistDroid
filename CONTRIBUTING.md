@@ -48,7 +48,8 @@ By contributing, you agree that your contributions are licensed under the projec
 
 ## Releasing (maintainers)
 
-1. Set `appVersion` in `app/build.gradle.kts` (the version code is derived from it).
+1. Set `appVersion` and `appVersionCode` in `app/build.gradle.kts` (1.2.3 → 10203; the build fails if they
+   don't match).
 2. Move the entries under **Unreleased** in [CHANGELOG.md](CHANGELOG.md) to a new `## [x.y.z] - YYYY-MM-DD`
    section.
 3. Commit, then tag and push: `git tag vx.y.z && git push origin vx.y.z`.

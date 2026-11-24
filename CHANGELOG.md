@@ -6,6 +6,13 @@ All notable changes to GistDroid are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-11-24
+
+### Changed
+
+- Prepared for F-Droid and IzzyOnDroid: release builds without the signing key are left unsigned, the version
+  code is set explicitly, and the store metadata has an app icon. No changes in the app itself.
+
 ## [1.0.1] - 2026-11-24
 
 ### Fixed
@@ -39,6 +46,7 @@ First public release.
 - Personal access token sign-in, with the token encrypted by an Android Keystore key.
 - Ko-fi support link in Settings → About.
 
-[Unreleased]: https://github.com/iamgiven/GistDroid/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/iamgiven/GistDroid/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/iamgiven/GistDroid/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/iamgiven/GistDroid/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/iamgiven/GistDroid/releases/tag/v1.0.0

@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # Empty for pull requests from forks: the APK is then signed with the debug key.
+      # Empty for pull requests from forks: the APK is then left unsigned.
       KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
       KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       VERSION_SUFFIX: -dev.${{ github.run_number }}
@@ -42,7 +42,9 @@ jobs:
         run: |
           version=$(sed -n 's/^val appVersion = "\(.*\)"/\1/p' app/build.gradle.kts)
           mkdir -p dist
-          cp app/build/outputs/apk/release/app-release.apk "dist/GistDroid-${version}${VERSION_SUFFIX}.apk"
+          apk=$(ls app/build/outputs/apk/release/app-release*.apk | head -n 1)
+          suffix=$([ -n "$KEYSTORE_BASE64" ] || echo "-unsigned")
+          cp "$apk" "dist/GistDroid-${version}${VERSION_SUFFIX}${suffix}.apk"
 
       - uses: actions/upload-artifact@v7
         with:
