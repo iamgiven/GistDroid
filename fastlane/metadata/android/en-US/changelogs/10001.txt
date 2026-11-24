@@ -1,0 +1,3 @@
+- Removing a file in the editor now asks for confirmation.
+- The file name stays on one line in the file editor.
+- Password managers no longer offer autofill in the editor.

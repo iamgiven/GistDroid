@@ -6,7 +6,7 @@ plugins {
 }
 
 // App version: bump for each release, then tag the commit "v<appVersion>".
-val appVersion = "1.0.0"
+val appVersion = "1.0.1"
 // versionCode is derived from the version: 1.2.3 -> 10203.
 val appVersionCode = appVersion.split('.').map(String::toInt).let { (major, minor, patch) ->
     major * 10_000 + minor * 100 + patch

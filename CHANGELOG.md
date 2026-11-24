@@ -6,6 +6,19 @@ All notable changes to GistDroid are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-24
+
+### Fixed
+
+- Removing a file from the editor's file list now asks for confirmation.
+- The file name and line count stay on one line in the file editor's top bar.
+- Password managers no longer offer to autofill file names or code in the editor.
+
+### Changed
+
+- Updated the build to Gradle 9.9.2, Android Gradle Plugin 9.5.2 and Kotlin 2.4.21, with Room 2.8.5 and
+  kotlinx.serialization 1.13.0.
+
 ## [1.0.0] - 2026-11-24
 
 First public release.
@@ -26,5 +39,6 @@ First public release.
 - Personal access token sign-in, with the token encrypted by an Android Keystore key.
 - Ko-fi support link in Settings → About.
 
-[Unreleased]: https://github.com/iamgiven/GistDroid/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/iamgiven/GistDroid/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/iamgiven/GistDroid/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/iamgiven/GistDroid/releases/tag/v1.0.0
