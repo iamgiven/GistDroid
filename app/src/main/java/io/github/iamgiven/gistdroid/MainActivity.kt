@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.iamgiven.gistdroid.data.ColorPalette
 import io.github.iamgiven.gistdroid.data.ThemeMode
 import io.github.iamgiven.gistdroid.ui.GistDroidNavHost
 import io.github.iamgiven.gistdroid.ui.theme.GistDroidTheme
@@ -22,7 +23,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             val theme by container.settings.themeMode.collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
             val dynamic by container.settings.dynamicColor.collectAsStateWithLifecycle(initialValue = true)
-            GistDroidTheme(themeMode = theme, dynamicColor = dynamic) {
+            val palette by container.settings.colorPalette.collectAsStateWithLifecycle(initialValue = ColorPalette.TEAL)
+            GistDroidTheme(themeMode = theme, dynamicColor = dynamic, palette = palette) {
                 GistDroidNavHost()
             }
         }

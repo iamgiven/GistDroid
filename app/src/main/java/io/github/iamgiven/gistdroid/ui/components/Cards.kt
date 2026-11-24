@@ -50,6 +50,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -191,6 +192,28 @@ fun StatusLabel(badge: Badge) {
 private val ListCardShape = RoundedCornerShape(20.dp)
 private val PreviewShape = RoundedCornerShape(10.dp)
 
+/** Colors of list cards: a light primary tint ("airy"), derived from the theme so it follows Material You. */
+private class ListCardColors(val container: Color, val code: Color, val line: Color)
+
+@Composable
+private fun listCardColors(): ListCardColors {
+    val cs = MaterialTheme.colorScheme
+    val dark = cs.surface.luminance() < 0.5f
+    return if (dark) {
+        ListCardColors(
+            container = cs.primaryContainer.copy(alpha = 0.22f).compositeOver(cs.surfaceContainerLow),
+            code = cs.primaryContainer.copy(alpha = 0.10f).compositeOver(cs.surfaceContainerLowest),
+            line = cs.primary.copy(alpha = 0.16f).compositeOver(cs.surfaceContainerLow),
+        )
+    } else {
+        ListCardColors(
+            container = cs.primaryContainer.copy(alpha = 0.27f).compositeOver(cs.surfaceContainerLowest),
+            code = cs.primaryContainer.copy(alpha = 0.10f).compositeOver(cs.surfaceContainerLowest),
+            line = cs.primary.copy(alpha = 0.12f).compositeOver(cs.surfaceContainerLowest),
+        )
+    }
+}
+
 /**
  * Card used by both the gist list and the local snippet list: language logo, title and status,
  * then a divider, a metadata row (language label first) and a code preview of up to three lines.
@@ -207,12 +230,13 @@ fun SnippetCard(
     meta: @Composable RowScope.() -> Unit,
 ) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val tint = listCardColors()
     Card(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
         shape = ListCardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        border = cardBorder(),
+        colors = CardDefaults.cardColors(containerColor = tint.container),
+        border = BorderStroke(1.dp, tint.line),
     ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -236,10 +260,7 @@ fun SnippetCard(
                     StatusLabel(badge)
                 }
             }
-            HorizontalDivider(
-                Modifier.padding(vertical = 10.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-            )
+            HorizontalDivider(Modifier.padding(vertical = 10.dp), color = tint.line)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -252,9 +273,9 @@ fun SnippetCard(
             if (preview != null || previewPlaceholder) {
                 Spacer(Modifier.height(10.dp))
                 Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    color = tint.code,
                     shape = PreviewShape,
-                    border = cardBorder(),
+                    border = BorderStroke(1.dp, tint.line),
                     modifier = Modifier.fillMaxWidth().animateContentSize(),
                 ) {
                     Crossfade(targetState = preview, label = "preview") { text ->
@@ -281,11 +302,12 @@ fun SnippetCard(
 /** Placeholder shaped like [SnippetCard], shown while the list loads. */
 @Composable
 fun SkeletonCard() {
+    val tint = listCardColors()
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = ListCardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        border = cardBorder(),
+        colors = CardDefaults.cardColors(containerColor = tint.container),
+        border = BorderStroke(1.dp, tint.line),
     ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -295,16 +317,13 @@ fun SkeletonCard() {
                     SkeletonLines(listOf(0.6f), MaterialTheme.typography.titleMedium.lineHeight)
                 }
             }
-            HorizontalDivider(
-                Modifier.padding(vertical = 10.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-            )
+            HorizontalDivider(Modifier.padding(vertical = 10.dp), color = tint.line)
             SkeletonLines(listOf(0.55f), MaterialTheme.typography.labelMedium.lineHeight)
             Spacer(Modifier.height(10.dp))
             Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                color = tint.code,
                 shape = PreviewShape,
-                border = cardBorder(),
+                border = BorderStroke(1.dp, tint.line),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Box(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {

@@ -85,6 +85,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import io.github.iamgiven.gistdroid.AppContainer
 import io.github.iamgiven.gistdroid.data.ThemeMode
+import io.github.iamgiven.gistdroid.data.ColorPalette
+import io.github.iamgiven.gistdroid.ui.theme.schemes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.luminance
 import io.github.iamgiven.gistdroid.data.remote.friendlyMessage
 import io.github.iamgiven.gistdroid.ui.appViewModel
 import io.github.iamgiven.gistdroid.ui.components.CardShape
@@ -135,6 +145,8 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
     val theme: StateFlow<ThemeMode> = c.settings.themeMode.stateIn(viewModelScope, SharingStarted.Eagerly, ThemeMode.SYSTEM)
     val dynamic: StateFlow<Boolean> = c.settings.dynamicColor.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val wrapCode: StateFlow<Boolean> = c.settings.wrapCode.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val palette: StateFlow<ColorPalette> =
+        c.settings.colorPalette.stateIn(viewModelScope, SharingStarted.Eagerly, ColorPalette.TEAL)
 
     private val _connect = MutableStateFlow(ConnectState())
     val connect: StateFlow<ConnectState> = _connect.asStateFlow()
@@ -165,6 +177,7 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
     fun setTheme(mode: ThemeMode) = viewModelScope.launch { c.settings.setThemeMode(mode) }
     fun setDynamic(enabled: Boolean) = viewModelScope.launch { c.settings.setDynamicColor(enabled) }
     fun setWrapCode(enabled: Boolean) = viewModelScope.launch { c.settings.setWrapCode(enabled) }
+    fun setPalette(palette: ColorPalette) = viewModelScope.launch { c.settings.setColorPalette(palette) }
     fun clearError() = _connect.update { it.copy(error = null) }
 }
 
@@ -176,6 +189,7 @@ fun SettingsScreen() {
     val theme by vm.theme.collectAsStateWithLifecycle()
     val dynamic by vm.dynamic.collectAsStateWithLifecycle()
     val wrapCode by vm.wrapCode.collectAsStateWithLifecycle()
+    val palette by vm.palette.collectAsStateWithLifecycle()
     val connect by vm.connect.collectAsStateWithLifecycle()
     val avatar by vm.avatar.collectAsStateWithLifecycle()
     var confirmSignOut by remember { mutableStateOf(false) }
@@ -278,6 +292,9 @@ fun SettingsScreen() {
                                 }
                                 Switch(checked = dynamic, onCheckedChange = null)
                             }
+                        }
+                        if (!dynamic || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                            PalettePicker(selected = palette, onSelect = vm::setPalette)
                         }
                         Row(
                             Modifier.toggleable(value = wrapCode, role = Role.Switch, onValueChange = { vm.setWrapCode(it) }),
@@ -424,6 +441,55 @@ private fun Context.clearClipboardIfEquals(token: String) {
         if (clip == token.trim()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) cm.clearPrimaryClip()
             else cm.setPrimaryClip(ClipData.newPlainText("", ""))
+        }
+    }
+}
+
+/** Row of palette swatches, shown when dynamic color is off or unavailable. */
+@Composable
+private fun PalettePicker(selected: ColorPalette, onSelect: (ColorPalette) -> Unit) {
+    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    Column {
+        Text("Color palette", style = MaterialTheme.typography.bodyLarge)
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.SpaceBetween) {
+            ColorPalette.entries.forEach { palette ->
+                val (light, darkScheme) = palette.schemes()
+                val scheme = if (dark) darkScheme else light
+                val isSelected = palette == selected
+                Column(
+                    Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .selectable(selected = isSelected, role = Role.RadioButton, onClick = { onSelect(palette) })
+                        .padding(4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(scheme.primaryContainer)
+                            .then(
+                                if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                                else Modifier
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(
+                            Modifier.size(22.dp).clip(CircleShape).background(scheme.primary),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (isSelected) Icon(Icons.Default.Check, null, Modifier.size(14.dp), tint = scheme.onPrimary)
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        palette.label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
     }
 }

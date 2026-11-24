@@ -16,6 +16,11 @@ import kotlinx.coroutines.flow.map
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
+/** Built-in color palette used when dynamic color is off (or unavailable). */
+enum class ColorPalette(val label: String) {
+    TEAL("Teal"), BLUE("Blue"), GREEN("Green"), PURPLE("Purple"), ROSE("Rose"), AMBER("Amber")
+}
+
 const val DEFAULT_CODE_FONT_SIZE = 13f
 const val MIN_CODE_FONT_SIZE = 9f
 const val MAX_CODE_FONT_SIZE = 24f
@@ -31,6 +36,7 @@ class SettingsStore(private val context: Context) {
     private val avatarKey = stringPreferencesKey("avatar_url")
     private val themeKey = stringPreferencesKey("theme")
     private val dynamicKey = booleanPreferencesKey("dynamic_color")
+    private val paletteKey = stringPreferencesKey("color_palette")
     private val wrapKey = booleanPreferencesKey("wrap_code")
     private val fontSizeKey = floatPreferencesKey("code_font_size")
 
@@ -64,6 +70,14 @@ class SettingsStore(private val context: Context) {
     }.distinctUntilChanged()
 
     val dynamicColor: Flow<Boolean> = context.dataStore.data.map { it[dynamicKey] ?: true }.distinctUntilChanged()
+
+    val colorPalette: Flow<ColorPalette> = context.dataStore.data.map { prefs ->
+        prefs[paletteKey]?.let { runCatching { ColorPalette.valueOf(it) }.getOrNull() } ?: ColorPalette.TEAL
+    }.distinctUntilChanged()
+
+    suspend fun setColorPalette(palette: ColorPalette) {
+        context.dataStore.edit { it[paletteKey] = palette.name }
+    }
 
     suspend fun setAccount(token: String, login: String) {
         val encrypted = withContext(Dispatchers.Default) { TokenCipher.encrypt(token) }

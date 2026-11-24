@@ -3,6 +3,7 @@ package io.github.iamgiven.gistdroid.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -16,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import io.github.iamgiven.gistdroid.data.ColorPalette
 import io.github.iamgiven.gistdroid.data.ThemeMode
 
 private val LightColors = lightColorScheme(
@@ -82,10 +84,16 @@ data class FabColors(val container: Color, val content: Color)
 
 val LocalFabColors = staticCompositionLocalOf { FabColors(LightColors.primary, Color.White) }
 
+/** The light and dark schemes of a built-in palette. */
+fun ColorPalette.schemes(): Pair<ColorScheme, ColorScheme> =
+    if (this == ColorPalette.TEAL) LightColors to DarkColors
+    else GeneratedSchemes[this] ?: (LightColors to DarkColors)
+
 @Composable
 fun GistDroidTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     dynamicColor: Boolean = true,
+    palette: ColorPalette = ColorPalette.TEAL,
     content: @Composable () -> Unit,
 ) {
     val dark = when (themeMode) {
@@ -97,8 +105,7 @@ fun GistDroidTheme(
     val colors = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
             if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        dark -> DarkColors
-        else -> LightColors
+        else -> palette.schemes().let { (light, darkScheme) -> if (dark) darkScheme else light }
     }
 
     val view = LocalView.current
