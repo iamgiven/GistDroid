@@ -88,13 +88,17 @@ import io.github.iamgiven.gistdroid.data.ThemeMode
 import io.github.iamgiven.gistdroid.data.ColorPalette
 import io.github.iamgiven.gistdroid.ui.theme.schemes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import io.github.iamgiven.gistdroid.data.remote.friendlyMessage
 import io.github.iamgiven.gistdroid.ui.appViewModel
 import io.github.iamgiven.gistdroid.ui.components.CardShape
@@ -448,48 +452,64 @@ private fun Context.clearClipboardIfEquals(token: String) {
 /** Row of palette swatches, shown when dynamic color is off or unavailable. */
 @Composable
 private fun PalettePicker(selected: ColorPalette, onSelect: (ColorPalette) -> Unit) {
-    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     Column {
         Text("Color palette", style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             ColorPalette.entries.forEach { palette ->
-                val (light, darkScheme) = palette.schemes()
-                val scheme = if (dark) darkScheme else light
                 val isSelected = palette == selected
-                Column(
+                Box(
                     Modifier
-                        .clip(RoundedCornerShape(12.dp))
+                        .size(72.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.secondaryContainer
+                            else MaterialTheme.colorScheme.surfaceContainerHigh
+                        )
                         .selectable(selected = isSelected, role = Role.RadioButton, onClick = { onSelect(palette) })
-                        .padding(4.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                        .semantics { contentDescription = "${palette.label} palette" },
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(
-                        Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(scheme.primaryContainer)
-                            .then(
-                                if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                                else Modifier
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
+                    PaletteSwatch(palette, Modifier.size(44.dp))
+                    if (isSelected) {
                         Box(
-                            Modifier.size(22.dp).clip(CircleShape).background(scheme.primary),
+                            Modifier
+                                .size(22.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceContainerLowest),
                             contentAlignment = Alignment.Center,
                         ) {
-                            if (isSelected) Icon(Icons.Default.Check, null, Modifier.size(14.dp), tint = scheme.onPrimary)
+                            Icon(Icons.Default.Check, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurface)
                         }
                     }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        palette.label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
             }
         }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            selected.label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * Wallpaper-picker style swatch: primary on the top half, secondary container bottom-left and
+ * tertiary bottom-right, taken from the palette's light scheme.
+ */
+@Composable
+private fun PaletteSwatch(palette: ColorPalette, modifier: Modifier = Modifier) {
+    val (light, darkScheme) = palette.schemes()
+    val top = light.inversePrimary
+    val bottomLeft = light.secondaryContainer
+    val bottomRight = lerp(light.tertiary, darkScheme.tertiary, 0.4f)
+    Canvas(modifier) {
+        drawArc(top, startAngle = 180f, sweepAngle = 180f, useCenter = true)
+        drawArc(bottomLeft, startAngle = 90f, sweepAngle = 90f, useCenter = true)
+        drawArc(bottomRight, startAngle = 0f, sweepAngle = 90f, useCenter = true)
     }
 }

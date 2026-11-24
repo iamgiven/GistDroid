@@ -203,13 +203,13 @@ private fun listCardColors(): ListCardColors {
         ListCardColors(
             container = cs.primaryContainer.copy(alpha = 0.22f).compositeOver(cs.surfaceContainerLow),
             code = cs.primaryContainer.copy(alpha = 0.10f).compositeOver(cs.surfaceContainerLowest),
-            line = cs.primary.copy(alpha = 0.16f).compositeOver(cs.surfaceContainerLow),
+            line = cs.primary.copy(alpha = 0.30f).compositeOver(cs.surfaceContainerLow),
         )
     } else {
         ListCardColors(
             container = cs.primaryContainer.copy(alpha = 0.27f).compositeOver(cs.surfaceContainerLowest),
             code = cs.primaryContainer.copy(alpha = 0.10f).compositeOver(cs.surfaceContainerLowest),
-            line = cs.primary.copy(alpha = 0.12f).compositeOver(cs.surfaceContainerLowest),
+            line = cs.primary.copy(alpha = 0.24f).compositeOver(cs.surfaceContainerLowest),
         )
     }
 }
