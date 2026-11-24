@@ -503,7 +503,7 @@ private fun PaletteTile(palette: ColorPalette, selected: Boolean, onClick: () ->
         modifier
             .aspectRatio(1f)
             .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
             .semantics { contentDescription = "${palette.label} palette" },
         contentAlignment = Alignment.Center,

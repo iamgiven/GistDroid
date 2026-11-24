@@ -164,12 +164,10 @@ fun EditorScreen(
             FileEditorPage(
                 file = editing,
                 onSave = { name, content -> vm.updateFile(editing.key, name = name, content = content) },
-                onDelete = if (state.files.size > 1) {
-                    {
-                        editingKey = null
-                        vm.removeFile(editing.key)
-                    }
-                } else null,
+                onDelete = {
+                    editingKey = null
+                    vm.removeFile(editing.key)
+                },
                 onClose = {
                     // Drop a freshly added file that was never filled in.
                     val current = vm.state.value.files.firstOrNull { it.key == editing.key }
@@ -291,9 +289,7 @@ fun EditorScreen(
                                 codeColors = codeColors,
                                 dragging = isDragging,
                                 onOpen = { editingKey = file.key },
-                                onDelete = if (state.files.size > 1) {
-                                    { vm.removeFile(file.key) }
-                                } else null,
+                                onDelete = { vm.removeFile(file.key) },
                                 dragHandle = if (state.files.size > 1) {
                                     {
                                         DragHandleIcon(
@@ -306,6 +302,35 @@ fun EditorScreen(
                                     }
                                 } else null,
                             )
+                        }
+                    }
+                    if (state.files.isEmpty()) {
+                        item(key = "noFiles") {
+                            Card(
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                                border = cardBorder(),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Column(
+                                    Modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.Description,
+                                        null,
+                                        Modifier.size(28.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Text("No files attached", style = MaterialTheme.typography.titleSmall)
+                                    Text(
+                                        "Add a new file or upload one from your device",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
                         }
                     }
                     item(key = "add") {

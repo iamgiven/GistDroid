@@ -180,13 +180,12 @@ class BackupManager(private val context: Context, private val c: AppContainer) {
         return ImportResult(imported, skipped)
     }
 
-    /** Reads text files picked on the device; throws [ImportException] for binary or oversized files. */
+    /** Reads text files picked on the device; throws [ImportException] for files that aren't text. */
     suspend fun readTextFiles(uris: List<Uri>): List<SnippetFile> = withContext(Dispatchers.IO) {
         uris.map { uri ->
             val name = displayName(uri) ?: "file.txt"
             val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                 ?: throw ImportException("Couldn't open $name")
-            if (bytes.size > MAX_FILE_BYTES) throw ImportException("$name is larger than 1 MB")
             val text = bytes.decodeToString()
             if ('\u0000' in text || '�' in text) throw ImportException("$name doesn't look like a text file")
             SnippetFile(name, text)
@@ -221,8 +220,4 @@ class BackupManager(private val context: Context, private val c: AppContainer) {
 
     private fun fingerprint(description: String, files: List<Pair<String, String>>) =
         (description.trim() + "\u0001" + files.joinToString("\u0002") { it.first + "\u0003" + it.second }).hashCode()
-
-    companion object {
-        private const val MAX_FILE_BYTES = 1_000_000
-    }
 }
